@@ -1,0 +1,119 @@
+{
+  "ResortRooms": [
+    {
+      "name": "Forest Private Pool Room",
+      "slug": "forest-private-pool-room",
+      "image": ["Forest_Private_Pool_1.jpg", "Forest_Private_Pool_2.jpg", "Forest_Private_Pool_3.jpg", "Forest_Private_Pool_4.jpg", "Forest_Private_Pool_5.jpg", "Forest_Private_Pool_6.jpg, Forest_Private_Pool_7.jpg, Forest_Private_Pool_8.jpg"],
+      "description": "The Forest Room – Private Pool offers a sublime blend of privacy, nature, and luxury. Featuring a king-size bed, modern comforts, and a private pool on the balcony — perfect for two adults (plus one child).",
+      
+      "experience": "Awaken to forest views through wide glass openings and step out into your own balcony-pool sanctuary. Lounge by the water, swim beneath open sky, and listen to wind in the branches — an experience of calm, undisturbed.",
+      "your_stays_include": [
+        "Daily Breakfast",
+      "In-room refreshments",
+      "Round-trip transfer from Lonavala station (3 nights+)",
+      "Forest Trail activity"
+      ],
+      " amenities": [
+        { "label": "Mountain with Forest View", "icon" : "FiEye" },
+        { "label": "Mini Bar", "icon" : "FiDroplet" },
+        { "label": "Wi-fi", "icon" : "FiWifi" },
+        { "label": "Room with Sofa", "icon" : "FiHome" },
+        { "label": "In room tea and coffee", "icon" : "FiCoffee" },
+        { "label": "Private balcony with Pool", "icon" : "FiGrid" },
+        { "label": "Four-Poster Bed", "icon" : "FiHome" },
+        { "label": "Ensuite bathroom with toiletries", "icon" : "FiMonitor" }
+      ],
+      "bath_and_wellness": [
+        "En-suite bathroom with shower",
+        "Hot & cold-water supply",
+        "Complimentary bath amenities",
+        "Hair dryer",
+        "Plush towels and bathrobes"
+      ]
+    },
+    {
+      "name": "Forest Bathtub Room",
+      "slug": "forest-bathtub-room",
+      "image": ["Forest_Bathtub_01.jpg", "Forest_Bathtub_02.jpg", "Forest_Bathtub_03.jpg", "Forest_Bathtub_04.jpg", "Forest_Bathtub_05.jpg", "Forest_Bathtub_06.jpg", "Forest_Bathtub_07.jpg"],
+      "description": "Hidden deep within the green expanse of The Arboreal Resort, the Forest Bathtub Room invites you to experience pure immersion in nature. Crafted entirely in warm pinewood and framed by sweeping glass windows, the room opens into dense foliage, blending the calm of natural light with the elegance of handcrafted interiors.",
+     
+      "signature_feature": "Private outdoor bathtub tucked along the forest edge",
+      "experience": "Bathe under drifting clouds, surrounded by birdsong and the scent of rain on leaves. Inside, rustic textures meet refined comfort with a canopy bed, vintage furnishings, and a softly lit lounge that feels both intimate and expansive.",
+      "your_stays_include": [
+        "Daily Breakfast",
+        "In-room refreshments",
+        "Round-trip transfer from Lonavala station (3 nights+)",
+        "Forest Trail activity"
+      ],
+      " amenities": [
+      { "label": "Forest View", "icon" : "FiEye" },
+      { "label": "Mini Bar", "icon" : "FiDroplet" },
+      { "label": "Wi-fi", "icon" : "FiWifi" },
+      { "label": "Room with Sofa & Work Table", "icon" : "FiHome" },
+      { "label": "In room tea and coffee", "icon" : "FiCoffee" },
+      { "label": "Private balcony with Bathtub", "icon" : "FiGrid" },
+      { "label": "Four-Poster Bed", "icon" : "FiHome" },
+      { "label": "Ensuite bathroom with toiletries", "icon" : "FiMonitor" }
+    ],
+      
+      "bath_and_wellness": [
+        "Outdoor private bathtub with forest view",
+        "Premium bath amenities",
+        "Hot and cold running water"
+      ]
+    },
+    {
+      "name": "Luxury Sunroom",
+      "slug": "luxury-sunroom",
+      "image": ["Luxury_Sunroom_Arboreal_01.jpg", "Luxury_Sunroom_Arboreal_02.jpg", "Luxury_Sunroom_Arboreal_03.jpg", "Luxury_Sunroom_Arboreal_04.jpg", "Luxury_Sunroom_Arboreal_05.jpg", "Luxury_Sunroom_Arboreal_06.jpg", "Luxury_Sunroom_Arboreal_07.jpg", "Luxury_Sunroom_Arboreal_08.jpg"],
+      "description": "Perched among whispering trees and lush slopes, the Luxury Sunroom blends sweeping natural beauty with refined comfort. This elegant retreat features a plush king-size bed, soft ambient lighting, and floor-to-ceiling windows that frame panoramic mountain and forest views.",
+     
+      "experience": "Step out onto your private balcony to breathe in earthy air as daylight dances upon the hillsides. Every detail is considered — from air conditioning and handcrafted furnishings to modern amenities — ensuring a deeply soothing stay.",
+      "your_stays_include": [
+        "Daily Breakfast",
+      "In-room refreshments",
+      "Round-trip transfer from Lonavala station (3 nights+)",
+      "Forest Trail activity"
+      ],
+      " amenities": [
+      { "label": "Mountain with Forest View", "icon" : "FiEye" },
+      { "label": "Mini Bar", "icon" : "FiDroplet" },
+      { "label": "Wi-fi", "icon" : "FiWifi" },
+      { "label": "Room with Sofa & Work Table", "icon" : "FiHome" },
+      { "label": "In room tea and coffee", "icon" : "FiCoffee" },
+      { "label": "Private balcony", "icon" : "FiGrid" },
+      { "label": "Four-Poster Bed", "icon" : "FiHome" },
+      { "label": "Ensuite bathroom with toiletries", "icon" : "FiMonitor" },
+      { "label": "Double Sized Bathtub (2 ppl)", "icon" : "FiWind" }
+    ],
+      "bath_and_wellness": [
+        "Modern ensuite bathroom with walk-in shower",
+        "Premium bath amenities and plush towels",
+        "Hot and cold running water",
+        "Vanity counter with well-lit mirror"
+      ]
+    },
+    {
+      "name": "Classic Sunroom",
+      "slug": "classic-sunroom",
+      "image": ["Classic_Sunroom_1.jpg, Classic_Sunroom_2.jpg, Classic_Sunroom_3.jpg, Classic_Sunroom_4.jpg, Classic_Sunroom_5.jpg, Classic_Sunroom_6.jpg"],
+      "description": "Bathed in soft daylight and surrounded by the whisper of trees, the Classic Sunroom is where nature and quiet refinement meet. Large glass walls frame the forest like a living painting, flooding the space with golden morning light. Handcrafted wooden furniture, warm earthy tones, and southern yellow pine flooring create an atmosphere that feels timeless — serene yet full of quiet vitality.",
+      
+      "experience": "Invite slow mornings with coffee and birdsong, while evenings glow in amber hues as the sun slips beyond the mountain. Here, luxury is measured not in extravagance, but in stillness — a space that feels alive with light, scent, and silence.",
+      "your_stays_include": [
+        "Daily Breakfast",
+      "In-room refreshments",
+      "A Forest Trail activity"
+      ],
+      "amenities": [
+        { "label": "Forest View", "icon" : "FiEye" },
+        { "label": "Mini Bar", "icon" : "FiDroplet" },
+        { "label": "Wi-fi", "icon" : "FiWifi" },
+        { "label": "Room with Sofa", "icon" : "FiHome" },
+        { "label": "In room tea and coffee", "icon" : "FiCoffee" }
+        
+      ],
+     "bath_and_wellness":[]
+    }
+  ]
+}

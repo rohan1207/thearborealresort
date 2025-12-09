@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-8RKDFTHRWM"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-8RKDFTHRWM");
+    </script>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Arboreal Resort - Nature Haven in Atvan, Lonavala</title>
+    <meta
+      name="description"
+      content="Discover The Arboreal Resort in Atvan, Lonavala, a haven for nature enthusiasts. Nestled amidst lush greenery and serene hill views, this resort offers easy access to Pawna Lake and picturesque waterfalls. Enjoy stylish, air-conditioned rooms with complimentary Wi-Fi, some featuring stunning vistas of mountains and valleys."
+    />
+    <meta
+      name="keywords"
+      content="Arboreal Resort, Lonavala resort, Atvan resort, Pawna Lake resort, nature resort, hill station resort, Lonavala accommodation, mountain resort, waterfall resort, luxury resort Lonavala"
+    />
+
+    <!-- Open Graph tags for social sharing -->
+    <meta
+      property="og:title"
+      content="The Arboreal Resort - Nature Escape in Lonavala"
+    />
+    <meta
+      property="og:description"
+      content="A haven for nature enthusiasts in Atvan, Lonavala. Experience lush greenery, serene hill views, and easy access to Pawna Lake. Your refreshing escape into nature awaits."
+    />
+    <meta property="og:url" content="https://thearborealresort.com" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://thearborealresort.com/logo.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Check if we need to redirect to a specific path
+      (function () {
+        const redirect = sessionStorage.getItem("redirect");
+        if (redirect) {
+          sessionStorage.removeItem("redirect");
+          if (redirect !== location.pathname) {
+            history.replaceState(null, null, redirect);
+          }
+        }
+      })();
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Resort",
+        "@id": "https://thearborealresort.com",
+        "name": "The Arboreal Resort",
+        "url": "https://thearborealresort.com",
+        "logo": "https://thearborealresort.com/logo.png",
+        "image": "https://thearborealresort.com/logo.png",
+        "description": "Discover The Arboreal Resort in Atvan, Lonavala, a haven for nature enthusiasts. Nestled amidst lush greenery and serene hill views, this resort offers easy access to Pawna Lake and picturesque waterfalls. Enjoy stylish, air-conditioned rooms with complimentary Wi-Fi, some featuring stunning vistas of mountains and valleys. Start each day right with a delicious breakfast takeaway service or indulge in convenient food delivery straight to your door. Unwind in the inviting indoor pool after a day of exploration. Ideal for two travelers seeking tranquility and a cozy ambiance, The Arboreal Resort is more than just a stay; it's a refreshing escape into nature.",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Atvan, Lonavala",
+          "addressRegion": "Maharashtra",
+          "addressCountry": "India"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "18.7565",
+          "longitude": "73.4084"
+        },
+        "priceRange": "$$",
+        "amenityFeature": [
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Free WiFi",
+            "value": true
+          },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Air Conditioning",
+            "value": true
+          },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Indoor Pool",
+            "value": true
+          },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Breakfast Service",
+            "value": true
+          },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Food Delivery",
+            "value": true
+          },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Mountain View",
+            "value": true
+          }
+        ],
+        "starRating": {
+          "@type": "Rating",
+          "ratingValue": "4"
+        }
+      }
+    </script>
+    <!-- Razorpay Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

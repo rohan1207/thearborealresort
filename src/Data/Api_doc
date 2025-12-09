@@ -1,0 +1,1432 @@
+Meta Search
+Bookings
+Create a Booking
+This API helps you to insert new bookings in our system. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+You need to take eZee Reservation to use this API.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&BookingData=[BOOKING_DATA]
+Header
+
+–
+
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “InsertBooking”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[BookingData] *	Json	You need to pass JSON data. please follow below “BookingData” section	
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en.
+Pass language code. Language codes are available here.	en
+publishtoweb	TINYINT(1)	1 – will retrieve all Room Types0 – will retrieve room types which are published to WEBDefault value is 0	0 OR 1
+BookingData JSON Format 
+
+{
+  "Room_Details": {
+    "Room_1": {
+      "Rateplan_Id": "[RATEPLAN_ID]", /* Mandatory */
+      "Ratetype_Id": "[RATETYPE_ID]", /* Mandatory */
+      "Roomtype_Id": "[ROOMTYPE_ID]", /* Mandatory */
+      "baserate": "[BASERATE]", /* Mandatory */
+      "extradultrate": "[EXTRADULTRATE]", /* Mandatory */
+      "extrachildrate": "[EXTRACHILDRATE]", /* Mandatory */
+      "number_adults": "[NUMBER_ADULTS]", /* Mandatory */
+      "number_children": "[NUMBER_CHILDREN]", /* Mandatory */
+      "ExtraChild_Age": "[EXTRACHILD_AGE]", /* Mandatory if number_children is not zero*/
+      "Package_Details": { /* If package is booked then only pass below details and for package otherwise ignore :*/
+        "Package_Id": "[PACKAGE_ID]", /* Mandatory */
+        "Package_Name": "[PACKAGE_NAME]", /* Mandatory */
+        "Package_Description": "PACKAGE_DESCRIPTION"
+      },
+      "Promotion_Details": { /* If room is booked using promotional code then only pass below details and for promotion otherwise ignore: */
+        "Promotional_Code": "[PROMOTIONAL_CODE]", /* Mandatory */
+        "Promotion_Id": "[PROMOTION_ID]", /* Mandatory */
+        "Promotion_Name": "[PROMOTION_NAME]", /* Mandatory */
+        "Promotion_Description": "[PROMOTION_DESCRIPTION]"
+      },
+      "Title": "[TITLE]",
+      "First_Name": "[FIRST_NAME]", /* Mandatory */
+      "Last_Name": "[LAST_NAME]", /* Mandatory */
+      "Gender": "[GENDER]",
+      "SpecialRequest": "[SPECIALREQUEST]"
+    },
+    "Room_2": {}
+  },
+  "ExtraCharge": { /* This will be useful when various Extra Charges exist in system and booker take any extra charge in booking. */
+    "Extra_1": {
+      "ExtraChargeId": "[EXTRACHARGEID]", /* Mandatory */
+      "ChargeAdult": "[CHARGEADULT]" /* Mandatory */
+    },
+    "Extra_2": {
+      "ExtraChargeId": "[EXTRACHARGEID]",
+      "ChargeChild": "[CHARGECHILD]"
+    },
+  },
+  "CardDetails": { /* All below parameters related to CardDetails are mandatory for inserting card details in transaction. If any of the below listed parameter is missing card details won’t be added in transaction. */
+    "cc_cardnumber": "[CC_CARDNUMBER]",
+    "cc_cardtype": "[CC_CARDTYPE]",
+    "cc_expiremonth": "[CC_EXPIREMONTH]",
+    "cc_expireyear": "[CC_EXPIERYEAR]",
+    "cvvcode": "[CVVCODE]",
+    "cardholdername": "[CARDHOLDERNAME]"
+  },
+  "check_in_date": "[CHECK_IN_DATE]", /* Mandatory */
+  "check_out_date": "[CHECK_OUT_DATE]", /* Mandatory */
+  "Booking_Payment_Mode": "[BOOKING_PAYMENT_MODE]",
+  "Email_Address": "[EMAIL_ADDRESS]", /* Mandatory */
+  "Source_Id": "[SOURCE_ID]",
+  "MobileNo": "[MOBILENO]",
+  "Address": "[ADDRESS]",
+  "State": "STATE",
+  "Country": "[COUNTRY]",
+  "City": "[CITY]",
+  "Zipcode": "[ZIPCODE]",
+  "Fax": "[FAX]",
+  "Device": "[DEVICE]",
+  "Languagekey": "[LANGUAGEKEY]",
+  "paymenttypeunkid": "[PAYMENTGATEWAY_ID]"
+}
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=InsertBooking&HotelCode=xxxxx&APIKey=XXXXXXXXXXXXXXXX&BookingData={"Room_Details":{"Room_1":{"Rateplan_Id":"1872700000000000002","Ratetype_Id":"1872700000000000001","Roomtype_Id":"1872700000000000002","baserate":"3500","extradultrate":"500","extrachildrate":"500","number_adults":"2","number_children":"1","ExtraChild_Age":"2","Title":"","First_Name":"ABC","Last_Name":"Joy","Gender":"","SpecialRequest":""}},"check_in_date":"2021-02-22","check_out_date":"2021-02-23","Booking_Payment_Mode":"","Email_Address":"abc@gmail.com","Source_Id":"","MobileNo":"","Address":"","State":"","Country":"","City":"","Zipcode":"","Fax":"","Device":"","Languagekey":"","paymenttypeunkid":""}
+Response
+
+Name	Data Type	Description	Example
+ReservationNo	String	Unique Reservatrion number	266
+SubReservationNo	String	Sub Reservation number is same as Res No for Single booking but If Group booking, It will show you sub number (1,2,3,…)	266
+InventoryMode	String	Mode of Inventory	ALLOCATED
+Success
+
+{"ReservationNo":"266","SubReservationNo":["266"],"Inventory_Mode":"ALLOCATED","lang_key":"en"}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+InvalidData	Please check data passed.
+eZee Reservation RequiredMeta Search
+Others
+Create a Travel Agent
+This API helps to insert Travel agents for a property or group of properties in a chain. The API can return data in JSON formats. The web service responds to HTTP GET requests. This API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+You need to take eZee Reservation if you want to allow Travel Agent to book a room on behalf of guests.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?APIKey=[API_KEY]&request_type=[Request_Type]&salutation=[salutation]&name=[name]&businessname=[businessname]&country=[country]&email=[email]&HotelCode=[Hotel_Code]&ismailsend=[Ismailsend]
+Header
+
+–
+
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *		Use Keyword “InsertTravelAgent”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXX
+[name] *	VARCHAR(100)	Travel agent name	user123
+[businessname] *	VARCHAR(100)	Business name	xxxxxx
+[salutation] *	VARCHAR(10)	Salutation 	xxxx
+[country] *	VARCHAR(100)	Country name	USA
+[email] *	VARCHAR(100)	Email id	abc@gmail.com
+bccmailid	VARCHAR(100)	Add Email-id for taking Bcc copy	abc@gmail.com
+businesssource	VARCHAR(10)	Business source	true/false
+isusercreated	VARCHAR(10)	Is user created	true/false
+percentdiscount	INT(11)	Percentage discount	5
+address	VARCHAR(200)	Address	A4-Golden street
+city	VARCHAR(100)	City	New York
+state	VARCHAR(100)	State	california
+zipcode	INT(11)	Zipcode	123456
+phone	INT(11)	Phone number	123456789
+mobile	INT(11)	Mobile number	1234567890
+fax	INT(11)	Fax number	123456
+allowtoviewccblock	VARCHAR(10)	For allow to view credit card block	true/false
+Sendemailtoguest	VARCHAR(10)	For send booking voucher email to Guest if booking made by Travel Agent from booking engine	true/false
+[Ismailsend] *	VARCHAR(10)	For Send email to Travel Agent to share Login Information.
+true/false
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?APIKey=XX&request_type=InsertTravelAgent&name=XX&businessname=GreenTravel&salutation=MR&country=India&email=XX&HotelCode=XX&percentdiscount=10&businesssource=true&isusercreated=true&ismailsend=true
+Success
+
+{
+"26":"2600000000001612",
+"1023":"102300000000000844",
+"3419":"341900000000000098"
+}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+DBConnectError	Database not connected.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+MANDATORYPARAM	[salutation,name,businessname,email,country ] This Parameters are mandatory.
+UnknownError	Unknown Error
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+BadRequest	Bad request type.
+eZee Reservation RequiredMeta Search
+Bookings
+Cancel a Booking
+This API helps you to cancel bookings in our system. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+You need to take eZee Reservation to use this API.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&ResNo=[ResNo]
+Header
+
+–
+
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “CancelBooking”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[ResNo] *	INT(11)	Reservation number	1
+SubNo	INT(11)	SubReservation Unique number	1
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en. 
+
+Pass language code. Language codes are available here.	en
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=CancelBooking&HotelCode=xxxx&APIKey=xxxxxxxxxxxxxxxx&language=en&ResNo=167&SubNo=&language=en
+Response
+
+Name	Data Type	Description	Example
+Success.SuccessMsg	–	Generate Success Response	Booking processed Successfully
+Errors.ErrorCode	–	Response Error Code	301, 404 etc
+Errors.ErrorMessage	–	Generate Response Message	Reservation already processed
+Success
+
+{“status”:”Successful”}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+5	Recoverable Error. Equivalent to http 503.
+CheckDate	Check out date should be greater than Check in date
+DBConnectError	Database not connected.
+InvalidData	Please check data passed.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+UnknownError	Unknown Error
+4	Timeout requested. Stops requests for the specified time.
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+BadRequest	Bad request type.
+ReservationNotExist	Reservation No. does not exist. Please check.
+Meta SearchOpen
+Bookings
+Read a Booking
+This API helps you to read booking details for a given booking ID. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+You need to take eZee Reservation to use this API.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&ResNo=[ResNo]
+Header
+
+–
+
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “ReadBooking”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[ResNo] *	INT(11)	Reservation number	1
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=ReadBooking&HotelCode=XXXX&APIKey=XXXXXXXXXXXXXXXXX&language=en&ResNo=3
+Response
+
+Name	Data Type	Description	Example
+ReservationNo	Integer(11)	Reservation Unique number	1
+Subreservation_No	Integer(11)	Sub Reservation Number	xxxx
+Transaction_Id	Integer(20)	Unique Transaction id	xxxxxxxxxxx
+StatusUnkId	Integer(20)	Status unique id. Status description is available here.	xxxx
+Businesssource	String	Source of business	web
+Market	String		
+Travelagent	String		
+PaymentType	String	Type of payment	Cash
+Address	String	Address	
+City	String	Name of City	New York
+State	String	State name	New York
+Country	String	Country name	USA
+Zipcode	Integer(11)	zipcode	123456
+Phone	Integer(20)	Phone number	1234567890
+Mobile	Integer(20)	Mobile Number	1234567890
+Fax	Integer(20)	Fax number	1234567890
+Email	String	Email id 	abc@xyz.com
+VehicleNo	String	Vehicle number	1234
+PickupDatetime	DateTime	DateTime of Pickup	2020-05-05 12:12:00
+IdentityType	String	Type of Identity proof	Passport
+IdentityNo	String	Identity type number 	123456789
+Nationality	String	Nationality of guest	American
+BirthDate	Date	Date of Birth	1980-05-05
+ExpiryDate	Date	Expiry Date	2022-05-02
+ArrivalBy	String	Arrival by	car
+DepartureBy	String	Departure by	car
+DropOffDatetime	Datetime	Drop of datetime	2020-02-020 12:12:00
+DeptVehicleNo	String	Departure vehicle number	Abc-8989
+Ownership	Integer(1)	Owernership 	0 or 1
+GroupId	Integer(20)	Group id	Xxxxxxxxxxxx
+ArrivalDate	Date	Date of arrival	2020-01-01
+DepartureDate	Date 	Departure date	2020-01-05
+No_of_Nights	Integer	No of night	3
+Salutation	String	Salutation	Mr
+First_Name	String	First name	Jhon
+Last_Name	String	Last name	tye
+Room_Type	String	Type of room	suite
+Rate_Type	String	Type of rate	daily
+ReservationGuarantee	String	Guarantee of reservation	Confirm reservation
+Adult	Integer(11)	Number of adult	2
+Child	Integer(11)	Number of child	0
+Total	Decimal	Total amount	25500
+Guestunkid	Integet(20)	Guest unique Id	xxxxxxxxxxxx
+Confirmed_Type	Integer(1)	Confirm type	1
+Success
+
+[{
+"Reservation_No": "KHT822",
+"Subreservation_No": "",
+"Transaction_Id": "110600000000000880",
+"StatusUnkId": "6",
+"Businesssource": "",
+"Market": "",
+"Travelagent": "",
+"PaymentType": null,
+"Address": "Surat",
+"City": "Surat",
+"State": "Gujarat",
+"Zipcode": "960050",
+"Country": "India",
+"Phone": "9825230",
+"Mobile": "9856741230",
+"Fax": "968572202",
+"Email": "",
+"VehicleNo": "CAR",
+"PickupDatetime": "2018-01-16 03:00:00",
+"IdentityType": "Passport",
+"IdentityNo": "963852",
+"Nationality": "India",
+"BirthDate": "1998-01-01 00:00:00",
+"ExpiryDate": "2021-01-01 00:00:00",
+"ArrivalBy": "car",
+"DepartureBy": "car",
+"DropOffDatetime": "2018-01-18 03:30:00",
+"DeptVehicleNo": "CAR",
+"Ownership": "0",
+"GroupId": "0",
+"ArrivalDate": "2018-01-05 10:00:00",
+"DepartureDate": "2018-01-06 12:00:00",
+"No_of_Nights": "1",
+"Salutation": "Jn.",
+"First_Name": "45435",
+"Last_Name": "",
+"Room_Type": "Penthouse",
+"Rate_Type": "weekly",
+"ReservationGuarantee": "Confirm Booking",
+"Adult": "1",
+"Child": "0",
+"Total": "0.0000",
+"Guestunkid": "110600000000000558",
+"Confirmed_Type": "1"
+}]
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+5	Recoverable Error. Equivalent to http 503.
+CheckDate	Check out date should be greater than Check in date
+DBConnectError	Database not connected.
+InvalidData	Please check data passed.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+UnknownError	Unknown Error
+4	Timeout requested. Stops requests for the specified time.
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+BadRequest	Bad request type.
+ReservationNotExist	Reservation No. does not exist. Please check.
+eZee Reservation RequiredMeta Search
+Bookings
+Retrieve a Booking Based on Parameters
+This API provides you current room stats and booking information based on reservation date or arrival dates. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+You need to take eZee Reservation to use this API.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&created_ from=[CREATED_FROM]&created_to=[CREATED_TO]&EmailId=[Email]
+Header
+
+–
+
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “BookingList”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[CREATED_FROM] *	Date	Date Fromformat(yyyy-mm-dd)	2020-05-23
+[CREATED_TO] *	Date	Date Toformat(yyyy-mm-dd)	2020-05-30
+ArrivalFrom	Date	ArrivalDate fromformat(yyyy-mm-dd)	2020-05-22
+ArrivalTo	Date	ArrivalDate Toformat(yyyy-mm-dd)	2020-05-30
+[Email] *	VARCHAR(100)	Booking EmailId	xxxxxx@xyz.com
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=BookingList&HotelCode=XXX&APIKey=XXX&arrival_from
+=XXX&arrival_to=XXX&EmailId=
+Response
+
+Name	Data Type	Description	Example
+ReservationNo	Integer(11)	Reservation Unique number	1
+GuestName	String	Name of Guest	Mr.Jhonson
+ArrivalDate	Date	Date of arrival	2020-02-20
+DepartureDate	Date	Date of Departure	2020-02-22
+CancelDate	Date	Date when Reservation is cancel	2020-02-10
+ReservationDate	Date	Date when Reservation is created	2020-02-05
+Room	String	Room Name	Delux
+ReservationGuarantee	String	Guarantee of reservation	Confirm booking
+Source	String	Source of reservation	web
+VoucherNo	Integer(11)	Voucher number	1
+DueAmount	Decimal	Due Amount	12500
+Deposit	Decimal	Deposit amount	0
+Status	String	Status of booking	Active
+BookingStatus	String	Current Status of booking	Confirmed Reservation
+Transaction Status	String	Status of transaction	Complete Booking
+Total Tax	Decimal	Total Tax amount	500
+TotalInclusiveTax	Decimal	Total Inclusive Tax Amount	1500
+TotalExclusivTax	Decimal	Total Exclusive Amount	1000
+OtherRevenueExclusiveTax	Decimal	Other Revenue tax exclusive amount	1200
+OtherRevenueInclusiveTax	Decimal	Other Revenue tax inclusive amount	1500
+FolioNo	String	Folio NUmber	A123
+
+BaseRateExclusiveTax, BaseRateInclusiveTax
+TransactionDate	Date	Date of transaction	
+ChargeName	String	Name of charge	
+ChargeAmount	Decimal	Charge amount	
+Success
+
+{
+    "SearchCriteria": {
+        "arrival_from": "2020-03-15",
+        "arrival_to": "2020-05-30"
+    },
+    "RoomList": {
+        "TotalActiveRoomInHotel": 1155,
+        "TotalBlockRooms": 0,
+        "TotalOccupiedRooms": 8
+    },
+    "BookingList": [
+        {
+            "ReservationNo": "RV506",
+            "GuestName": "Mr. Anis",
+            "ArrivalDate": "2020-05-08",
+            "DepartureDate": "2020-05-12",
+            "CancelDate": "",
+            "ReservationDate": "2020-05-08",
+            "Room": "Garden View",
+            "RoomShortCode": "GV",
+            "ReservationGuarantee": "Confirm Booking",
+            "Source": "Ajay Tours and Travels",
+            "VoucherNo": "-",
+            "Mobile": "-",
+            "Address": "",
+            "Email": "nishit.vankawala@ezeetechnosys.com",
+            "Country": "India",
+            "Adult": "1",
+            "Child": "0",
+            "Phone": "-",
+            "NoOfGuest": 1,
+            "NoOfNights": "4",
+            "salutation": "Mr.",
+            "FirstName": "Anis",
+            "LastName": "",
+            "DueAmount": 13200,
+            "Deposit": 0,
+            "Status": "Active",
+            "BookingStatus": "Confirmed Reservation",
+            "TransactionStatus": "Complete Booking",
+            "Total Tax": 1345.44,
+            "TotalInclusiveTax": 13200,
+            "TotalExclusivTax": 11854.56,
+            "OtherRevenueExclusiveTax": 2000,
+            "OtherRevenueInclusiveTax": 2360,
+            "FolioNo": "GF759",
+            "BaseRateExclusiveTax": {
+                "2020-05-08": 2463.64,
+                "2020-05-09": 2463.64,
+                "2020-05-10": 2463.64,
+                "2020-05-11": 2463.64
+            },
+            "BaseRateInclusiveTax": {
+                "2020-05-08": 2710,
+                "2020-05-09": 2710,
+                "2020-05-10": 2710,
+                "2020-05-11": 2710
+            },
+            "ExtraCharges": {
+                "2020-05-08": [
+                    {
+                        "TransactionDate": "2020-05-08",
+                        "ChargeName": "Pool's",
+                        "ChargeAmount": "500.0000"
+                    },
+                    {
+                        "TransactionDate": "2020-05-08",
+                        "ChargeName": "CGST@6%",
+                        "ChargeAmount": "90.0000"
+                    }
+                ],
+                "2020-05-09": [
+                    {
+                        "TransactionDate": "2020-05-09",
+                        "ChargeName": "Pool's",
+                        "ChargeAmount": "500.0000"
+                    },
+                    {
+                        "TransactionDate": "2020-05-09",
+                        "ChargeName": "CGST@6%",
+                        "ChargeAmount": "90.0000"
+                    }
+                ],
+                "2020-05-10": [
+                    {
+                        "TransactionDate": "2020-05-10",
+                        "ChargeName": "Pool's",
+                        "ChargeAmount": "500.0000"
+                    },
+                    {
+                        "TransactionDate": "2020-05-10",
+                        "ChargeName": "CGST@6%",
+                        "ChargeAmount": "90.0000"
+                    }
+                ],
+                "2020-05-11": [
+                    {
+                        "TransactionDate": "2020-05-11",
+                        "ChargeName": "Pool's",
+                        "ChargeAmount": "500.0000"
+                    },
+                    {
+                        "TransactionDate": "2020-05-11",
+                        "ChargeName": "CGST@6%",
+                        "ChargeAmount": "90.0000"
+                    }
+                ]
+            }
+        }
+    ]
+}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+5	Recoverable Error. Equivalent to http 503.
+CheckDate	Check out date should be greater than Check in date
+DBConnectError	Database not connected.
+BookingListLimitExceed	You can not request data of more than 365 days.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+UnknownError	Unknown Error
+4	Timeout requested. Stops requests for the specified time.
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+BadRequest	Bad request type.
+getBookingListError	Booking List error
+Meta SearchOpen
+Bookings
+Post Create Bookings Actions
+This API helps you to process post create bookings actions in our system . The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+You need to take eZee Reservation to use this API.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&Process_ Data=[PROCESS_DATA]
+Header
+
+–
+
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “ProcessBooking”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en.
+Pass language code. Language codes are available here.	en
+Process_Data=>Action	String	Action for booking	PendingBooking,
+FailBooking,
+ConfirmBooking
+Process_Data=>ReservationNo	String	Reservation number	RES522
+Process_Data=>Inventory_Mode	String	Mode of inventory	ALLOCATED,
+REGULAR
+Process_Data=>Error_Text	String	Error text	
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=ProcessBooking&HotelCode=XXX&APIKey=XXX&Process_Data={"Action":"ConfirmBooking","ReservationNo":"RES522","Inventory_Mode":"XXX","Error_Text":""}
+Response
+
+Name	Data Type	Description	Example
+Success.SuccessMsg	–	Generate Success Response	Booking processed Successfully
+Errors.ErrorCode	–	Response Error Code	301, 404 etc
+Errors.ErrorMessage	–	Generate Response Message	Reservation already processed
+Success
+
+{
+"result":"success",
+"message":"Booking Processed Succesfully"
+}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+5	Recoverable Error. Equivalent to http 503.
+ReservationAlreadyProcessed	Reservation is already processed.
+ParametersMissing	Missing parameters.
+DBConnectError	Database not connected.
+-1	Booking Process Failure.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+UnknownError	Unknown Error
+4	Timeout requested. Stops requests for the specified time.
+ReservationNotExist	Reservation No. does not exist. Please check.
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+BadRequest	Bad request type.
+eZee Reservation RequiredMeta Search
+Bookings
+Check Availability
+This API helps you to check availability for a room. To check availability, you need to include certain fields in your request like room type, check in date, checkout date, no of rooms, no of nights, pax and many more to fulfill your needs.
+
+The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&check_in_date=[CHECK_IN_DATE]&check_out_date=[CHECK_OUT_DATE]&num_nights=[NUMBER_NIGHTS]&number_adults=[NUMBER_ADULTS]&number_children=[NUMBER_CHILDREN]&num_rooms=[NUMBER_ROOMS]&promotion_code=[PROMOTION_CODE]&property_configuration_info=[PROPERTY_CONFIG_INFO]&showtax=[SHOW_TAX]&show_only_available_rooms=[SHOW_ONLY_AVAILABLE_ROOMS]&show_matched_minimum_nights_rateplans=[SHOW_MATCHED_MINIMUM_NIGHTS_RATEPLANS]&language=[LANGUAGE]&roomtypeunkid=[ROOMTYPE_ID]&packagefor=[PACKAGEFLAG]&promotionfor=[PROMOTIONFLAG]
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “RoomList”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+check_in_date*	DATE	Check In date. [Format: yyyy-mm-dd]	2020-05-20
+check_out_date	DATE	Check Out Date [Format: yyyy-mm-dd]	2020-05-30
+num_nights	INT(11)	Defaults to 10 days after the start date.The date range is limited to the first 30 days from the check in date.	1,5,10
+number_adults	INT(11)	No. of Adult(s). Default is 1	1,2
+number_children	INT(11)	No.of Child(s). Default is 0	1,2
+num_rooms	INT(11)	Total No. of Room(s). Rooms Default is 1	1,2
+promotion_code	INT(11)	Unique Promotion Code. Default is Empty	112500000000000001
+property_configuration_info	INT(11)	It is based upon property booking engine settings. Default is 0	0,1
+showtax	INT(11)	Used for tax inclusive & exclusive rates. This is useful when data retrivation does not depend upon whole property configuration. This parameter is used when property_configuration_info is set to 0.	0,1
+show_only_available_rooms	INT(11)	It has two values 0 OR 1.1 will return all available rate plans only.This is useful while data retrivation is not depend upon the whole property configuration. This parameter is used when property_configuration_info is set to 0.Default value is 0.	0,1
+show_matched_minimum_nights_rateplans	INT(11)	0 – Display All without filtration without filtration on basis of nights 1 – Match with minimum nights criteria2 – Match Exactly with nights selectedThis is useful while data retrivation is not depend upon the whole property configuration. This parameter is used when property_configuration_info is set to 0.	0,1,2
+[LANGUAGE]	VARCHAR(20)	Pass language code. Language codes are available here.	en
+roomtypeunkid	INT(20)	Unique RoomType ID	12500000000000001
+packagefor	VARCHAR(20)	This parameter is optional and also not mandatory to add but please take note that in this case it will give you desktop based package data only.
+If you want package data according to desktop or mobile you have to pass parameters according to its value.
+DESKTOP , MOBILE
+promotionfor	VARCHAR(20)	This parameter is optional and also not mandatory to add but please take note that in this case it will give you desktop based promotion data only.
+If you want promotion data according to desktop or mobile you have to pass parameters according to its value.
+DESKTOP , MOBILE
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=RoomList&HotelCode=XX&APIKey=XXXXXX&check_in_date= 2015-07-13&check_out_date=&num_nights=2&number_adults=1 &number_children=0&num_rooms=1&promotion_code=&property_configuration_info=0&showtax=0&show_only_available_rooms=0&language=en&roomtypeunkid=XXXX&packagefor=DESKTOP&promotionfor=DESKTOP
+Response
+
+Name	Data Type	Description	Example
+Room_Name	VARCHAR(255)	Name of Room	Room1, Room2
+Room_Description	VARCHAR(255)	Room description	Room with a Pool View
+Roomtype_Name	VARCHAR(255)	Room Type	Deluxe
+Package_Description	VARCHAR(255)	Package Description	Package Includes Breakfast and Lunch
+Roomtype_Short_code	VARCHAR(255)	Room Type short code	R1,R2
+Specials_Desc	VARCHAR(255)	Specials Details	
+specialconditions	VARCHAR(255)	Special Conditions	
+specialhighlightinclusion	VARCHAR(255)	Special Highlight Inclusion	
+hotelcode	INT(11)	Unique Hotel code given to property	XX
+roomtypeunkid	INT(11)	Room Type Unique Id	114000000000000005
+ratetypeunkid	INT(11)	Rate Type Unique Id	114000000000000001
+roomrateunkid	INT(11)	Rate Plan Unique Id	114000000000000001
+base_adult_occupancy	INT(11)	Base adult occupancy in room	2,3
+base_child_occupancy	INT(11)	Base child occupancy in room	2,3
+max_adult_occupancy	INT(11)	Maximum adult occupancy in room	2,3
+max_child_occupancy	INT(11)	Maximum child occupancy in room	2,3
+max_occupancy	INT(11)	Maximum Occupancy	
+inclusion	VARCHAR(200)	Inclusion	
+available_rooms	INT(11)	Room Inventory date wise array	2,3
+min_ava_rooms	INT(11)	Minimum Inventory from available rooms of each date	2,3
+room_rates_info
+before_discount_inclusive_tax_adjustment	DECIMAL(19,4)	Date wise strike rates with inclusive of tax & adjustment	2000,1500
+exclusive_tax	DECIMAL(19,4)	Per night room rates exclusive of tax	2000,1500
+tax	DECIMAL(19,4)	Per night room tax only	2000,1500
+adjustment	DECIMAL(19,4)	Per night room rate adjustment only	2000,1500
+inclusive_tax_adjustment	DECIMAL(19,4)	Per night room rate inclusive of tax & adjustment	2000,1500
+rack_rate	DECIMAL(19,4)	Room level rack rate	2000,1500
+totalprice_room_only	DECIMAL(19,4)	Total room rates exclusive of tax	2000,1500
+totalprice_inclusive_all	DECIMAL(19,4)	Total room price inclusive of all taxes & adjustment	2000,1500
+avg_per_night_before_discount	DECIMAL(19,4)	Average Per night rate without discount	2000,1500
+avg_per_night_after_discount	DECIMAL(19,4)	Average per night rate after discount	2000,1500
+avg_per_night_without_tax	DECIMAL(19,4)	Average per night without tax	2000,1500
+day_wise_baserackrate	DECIMAL(19,4)	Day wise base rack rate	2000,1500
+day_wise_beforediscount	DECIMAL(19,4)	Day wise before discount	2000,1500
+extra_adult_rates_info
+exclusive_tax	DECIMAL(19,4)	Per night extra adult rates exclusive of tax	2000,1500
+tax	DECIMAL(19,4)	Per night extra adult rate tax only	2000,1500
+adjustment	DECIMAL(19,4)	Per night extra adult rate adjustment only	0,0.10
+inclusive_tax_adjustment	DECIMAL(19,4)	Per night extra adult rate inclusive of tax &adjustment	2000,1500
+rack_rate	DECIMAL(19,4)	Room level extra adult rack rate	2000,1500
+extra_child_rates_info
+exclusive_tax	DECIMAL(19,4)	Per night extra child rates exclusive of tax	1000,500
+tax	DECIMAL(19,4)	Per night extra child rate tax only	1000,500
+adjustment	DECIMAL(19,4)	Per night extra child rate adjustment only	1000,500
+inclusive_tax_adjus tment	DECIMAL(19,4)	Per night extra child rate inclusive of tax & adjustment	1000,500
+exclusive_tax	DECIMAL(19,4)	Per night extra child rates exclusive of tax	1000,500
+rack_rate	DECIMAL(19,4)	Room level extra child rack rate	1000,500
+Avg_min_nights	INT(11)	Avg minimum nights	1
+Min_nights	INT(11)	Minimum stay for each night	2,4
+Avg_max_nights	INT(11)	Avg maximum nights	3
+currency_code	VARCHAR(20)	Currency Code 	USD
+currency_sign	VARCHAR(20)	Currency Sign 	$
+RoomAmenities	VARCHAR(2000)	Room Amenities	TV, refrigerator,AC
+RoomImages	VARCHAR(255)	Room Images	
+ShowPriceFormat	DECIMAL(19,4)	Show Rates Average Per Night Or Price for WholeStay	Show Rates Average Per Night Or Price for WholeStay
+DefaultDisplyCurrencyCode	VARCHAR(20)	Default Currency Code	USD
+check_in_time	TIME	Hotel Check in time	12:00
+check_out_time	TIME	Hotel Check out time	12:00
+Hotel_amenities	VARCHAR(2000)	Hotel amenities	AC, TV
+TaxName	VARCHAR(2000)	All Tax name which are apply	Tax1,Tax2
+NOTES :
+
+System will give you per room rates , for multiple rooms you have to calculate based upon above details.
+
+System will not calculate any extra adult & child rate. That information too available in above response data.
+
+Success
+
+[  {
+    "Room_Name": "Deluxe EP",
+    "Room_Description": "Deluxe EP",
+    "Roomtype_Name": "Deluxe",
+    "Roomtype_Short_code": "DL",
+    "Package_Description": "",
+    "Specials_Desc": "",
+    "specialconditions": "",
+    "specialhighlightinclusion": "",
+    "hotelcode": "XXXX",
+    "roomtypeunkid": "114000000000000005",
+    "ratetypeunkid": "114000000000000001",
+    "roomrateunkid": "114000000000000011",
+    "base_adult_occupancy": "2",
+    "base_child_occupancy": "1",
+    "max_adult_occupancy": "3",
+    "max_child_occupancy": "2",
+    "max_occupancy": "",
+    "inclusion": "dsfsdf",
+    "available_rooms": {
+      "2020-11-01": "3",
+      "2020-11-02": "3"
+    },
+    "min_ava_rooms": "3",
+    "room_rates_info": {
+      "before_discount_inclusive_tax_adjustment": [],
+      "exclusive_tax": {
+        "2020-11-01": "1300.0000",
+        "2020-11-02": "1300.0000"
+      },
+      "exclusivetax_baserate": {
+        "2020-11-01": "1300.0000",
+        "2020-11-02": "1300.0000"
+      },
+      "tax": [],
+      "adjustment": {
+        "2020-11-01": 0,
+        "2020-11-02": 0
+      },
+      "inclusive_tax_adjustment": {
+        "2020-11-01": 1300,
+        "2020-11-02": 1300
+      },
+      "rack_rate": "1300.0000",
+      "totalprice_room_only": 2600,
+      "totalprice_inclusive_all": 2600,
+      "avg_per_night_before_discount": "",
+      "avg_per_night_after_discount": 1300,
+      "avg_per_night_without_tax": 1300,
+      "day_wise_baserackrate": [
+        "1300.0000",
+        "1300.0000"
+      ],
+      "day_wise_beforediscount": [
+        "1300.0000",
+        "1300.0000"
+      ]
+    },
+    "extra_adult_rates_info": {
+      "exclusive_tax": {
+        "2020-11-01": "800.0000",
+        "2020-11-02": "800.0000"
+      },
+      "tax": [],
+      "adjustment": {
+        "2020-11-01": 0,
+        "2020-11-02": 0
+      },
+      "inclusive_tax_adjustment": {
+        "2020-11-01": 800,
+        "2020-11-02": 800
+      },
+      "rack_rate": "800.0000"
+    },
+    "extra_child_rates_info": {
+      "exclusive_tax": {
+        "2020-11-01": "500.0000",
+        "2020-11-02": "500.0000"
+      },
+      "tax": [],
+      "adjustment": {
+        "2020-11-01": 0,
+        "2020-11-02": 0
+      },
+      "inclusive_tax_adjustment": {
+        "2020-11-01": 500,
+        "2020-11-02": 500
+      },
+      "rack_rate": "500.0000"
+    },
+    "min_nights": {
+      "2020-11-01": 1,
+      "2020-11-02": 1
+    },
+    "Hotel_amenities": "[]",
+    "Avg_min_nights": 1,
+    "max_nights": {
+      "2020-11-01": "",
+      "2020-11-02": ""
+    },
+    "Avg_max_nights": "",
+    "check_in_time": "12:00",
+    "check_out_time": "12:00",
+    "TaxName": [],
+    "ShowPriceFormat": "Average Per Night Rate",
+    "DefaultDisplyCurrencyCode": null,
+    "deals": "",
+    "IsPromotion": false,
+    "Promotion_Code": null,
+    "Promotion_Description": null,
+    "Promotion_Name": null,
+    "Promotion_Id": null,
+    "Package_Name": "",
+    "Package_Id": "",
+    "currency_code": "INR",
+    "currency_sign": "₹",
+    "localfolder": "shafinhotels",
+    "CalDateFormat": "dd-mm-yy",
+    "ShowTaxInclusiveExclusiveSettings": "1",
+    "hidefrommetasearch": "",
+    "prepaid_noncancel_nonrefundable": "0",
+    "cancellation_deadline": "",
+    "digits_after_decimal": "2",
+    "visiblity_nights": "false",
+    "BookingEngineURL": "<url>/booking/book-rooms-shafinhotels",
+    "RoomAmenities": "Bed,TV,Refrigerator,AC",
+    "room_main_image": ""
+  },
+] 
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+NightsLimitExceeded	You can not request for more then 30 nights.
+CheckDate	Check out date should be greater than CheckYou can not request for more then 30 nights.
+MaxAdultLimitReach	Requested adults are greater then actual property configuration.
+RoomListingError	Room List error
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access of API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+InvalidSearchCriteria	Invalid search criteria found.Check out date & No of nights can not be pass together.
+DateNotvalid	Requested date is past.
+MaxChildLimitReach	Requested child are greater then actual property configuration.
+eZee Reservation RequiredMeta Search
+Configuration
+Retrieve Payment Gateways
+This API provides all payment gateways which are available for your Booking Engine. The API can return data in JSON formats. The web service responds to HTTP GET requests. You need to take eZee Reservation to use this API.
+
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?APIKey=[API_KEY]&request_type=[Request_Type]&HotelCode=[Hotel_Code]
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “ConfiguredPGList”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXX
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?APIKey=XX&request_type=ConfiguredPGList&HotelCode=XX
+Response
+
+Name	Data Type	Description	Example
+paymenttypeunkid	    Integer(20)	Payment uniqueid	xxxxxxxxxxxx
+hotel_code	    Integer(11)	Unique hotel code	1234
+shortcode	    String	Short code	AirPay
+paymenttype	    String	Source of business	AirPay
+Success
+
+[
+{
+"paymenttypeunkid": "4000000000000048",
+"hotel_code": "1234",
+"shortcode": "AirPay",
+"paymenttype": "AirPay”
+}
+]
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+DBConnectError	database not connected.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+BadRequest	Bad request type.
+UnknownError	Unknown Error
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+eZee Reservation RequiredMeta SearchOpen
+Configuration
+Verify Travel Agent
+In this API, we expect some details from the client to be sent in request and based on that request we verify Travel Agent user and return verified Travel Agent information for properties in which it is created. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+You need to take eZee Reservation to use this API.
+
+
+URI Request
+
+Request parameters are supplied by appending a question mark (?) to the base URI, followed by a sequence of parameter names and values separated by an ampersand (&).
+
+End Point URL
+
+[BaseUrl]/booking/reservation_api/listing.php?APIKey=[APIKey]&request_type=[request_type]&username=[username]&password=[password]&groupcode=[groupcode]
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “VerifyUser”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXX
+[username] *	VARCHAR(300)	Pass travel agent user name	XXXXXXXXX
+[password] *	VARCHAR(300)	Pass base_64 encoded encrypted password.
+Here’s the online tool for base_64 encoded encryption 	base64_encode($x)
+[groupcode] *	VARCHAR(300)	Unique group code for each registered chain of properties. 	XXXXX
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?APIKey=XX&request_type=VerifyUser&username=XX&password=XX&groupcode=XX
+Response
+
+Name	Data Type	Description	Example
+contactunkid	Integer(20)	Unique contact id	xxxxxxxxxxxx
+salutation	String	Salutation of user	301, 404 etc
+business_name	String	Name of business	Reservation already processed
+name	String	User name	Jhon
+address	String	Address of user	3817 Sugar Camp Road
+city	String	City name	New York
+state	String	State name	New York
+zipcode	Integer	zipcode	123456
+country	String	Country name	USA
+phone	Integer	Phone number	123456789
+mobile	Integer	Mobile number	1234567890
+email	String	Email id	PamalaWHam@rhyta.com
+isusercreated	String	Is user created	1 or 0
+Success
+
+"contact_detail":{
+"26":{"contact_detail":{"contactunkid":"2600000000001612","salutation":"Mr.","business_name":"OLX","name":"Maximum","address":null,"city":null,"state":null,"zipcode":null,"country":"India","phone":null,"mobile":null,"email":"Maximum@gmail.com","isusercreated":"1"}},
+"1023":{"contact_detail":{"contactunkid":"102300000000000844","salutation":"Mr.","business_name":"OLX","name":"Maximum","address":null,"city":null,"state":null,"zipcode":null,"country":"India","phone":null,"mobile":null,"email":"Maximum@gmail.com","isusercreated":"1"}},
+"3419":{"contact_detail":{"contactunkid":"341900000000000098","salutation":"Mr.","business_name":"OLX","name":"Maximum","address":null,"city":null,"state":null,"zipcode":null,"country":"India","phone":null,"mobile":null,"email":"Maximum@gmail.com","isusercreated":"1"}}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC1	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Groups Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+DBConnectError	Database not connected.
+BadRequest	Bad request type.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+INVUSEPASS	Invalid Username and Password.
+UnknownError	Unknown Error
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+eZee Reservation RequiredMeta Search
+Configuration
+Retrieve Extras Rate Based on Parameters
+This API will give you a total extra service rate on the basis of configured Extra Charges, check in date and check out date in your property.  The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+This API will fulfill both needs to give you details for single extra charges or multiple extra charges at a time. You need to take eZee Reservation to use this API. 
+
+
+URI Request
+
+Request parameters are supplied by appending a question mark (?) to the base URI, followed by a sequence of parameter names and values separated by an ampersand (&).
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&check_in_date=[CHECK_IN_DATE]&check_out_date=[CHECK_OUT_DATE]&ExtraChargeId=[EXTRACHARGEID]&Total_ExtraItem=[TOTAL_EXT RAITEM]
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “CalculateExtraCharge”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXX
+[CHECK_IN_DATE] *	DATE	Pass Check in date in YYYY-MM-DD format	2020-07-05
+[CHECK_OUT_DATE] *	DATE	Pass Check out date in YYYY-MM-DD format	2020-07-07
+[EXTRACHARGEID] *	VARCHAR(300)	Pass [single|multiple] extra charge id’s for your property	Single : XXX
+Multiple : XXX, YYY
+[TOTAL_EXT RAITEM] *	VARCHAR(300)	Pass total number of items for  [single|multiple] extra charges	Single : 2
+Multiple : 2, 3
+
+Sample 1:
+Extra charge Rule : Per Pax,
+Adults : 2, Child : 1 Pass [TOTAL_EXTRAITEM] = 3
+
+Sample 2:
+Extra charge Rule : Per Quantity, Quantity: 2 Pass [TOTAL_EXTRAITEM] = 2
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=CalculateExtraCharge&HotelCode=XXX&APIKey=XXX&check_in_date=XXX&check_out_date=XXX&ExtraChargeId=XXX&Total_ExtraItem=X
+Response
+
+Name	Data Type	Description	Example
+IndividualCharge		List of Individual Charge	xxx
+TotalCharge		Total of charge 	160
+Success
+
+{
+"IndividualCharge": { "XXX": 150,
+"YYY": 10
+},
+"TotalCharge": 160
+}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+5	Recoverable Error. Equivalent to http 503.
+CheckDate	Check out date should be greater than Check in date
+DBConnectError	Database not connected.
+getExtraChargeListError	Extra Charge List error
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+UnknownError	Unknown Error
+4	Timeout requested. Stops requests for the specified time.
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+BadRequest	Bad request type.
+eZee Reservation RequiredMeta Search
+Finance
+Retrieve Extras
+This API provides information of extra services available at your property which can be used in mapping or display purposes in the external applications. The API can return data in JSON formats.
+
+
+URI Request
+
+Request parameters are supplied by appending a question mark (?) to the base URI, followed by a sequence of parameter names and values separated by an ampersand (&).
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&language=[LANGUAGE];
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “ExtraCharges”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en.
+Pass language code. Language codes are available here.	en
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=ExtraCharges&HotelCode=XXX&APIKey=XXX&language=en
+Response
+
+Name	Data Type	Description	Example
+ExtraChargeId	Integer(20)	Unique id of ExtraCharge	XXXXXXXXXXXXXXXXXX
+ShortCode	String	ShortCode of ExtraCharge	Transport
+charge	String	ExtraCharge name	Welcome Drink
+Description	String	ExtraCharge Description	
+Rate	Decimal	ExtraCharge Rate	100
+CharegeRule	String	Rule of ExtraCharge	PERQUANTITY
+PostingRule	String	Rule of posting ExtraCharge	ONLYCHECKOUT
+ValidFrom	Date	From date of ExtraCharge is valid	2020-02-03
+ValidTo	Date	To Date of Extracharge is valid	2020-03-03
+ischargealways	integer(1)	Is always charge or not,
+0: not always charge,
+1: always charge	0 or 1
+applyon_rateplan	Integer(20)	Rateplanid where ExtraCharge applied or ALL	XXXXXXXXXXXXXXXXXX
+applyon_special	Integer(20)	Specialid where ExtraCharge applied or ALL	ALL
+Success
+
+[
+{
+"ExtraChargeId": "XXXXXXXXXXXXXXXXXX",
+"ShortCode": "Bottle of Wine on Arrival", "charge": "Bottle of Wine on Arrival", "description": null,
+"Rate": "500.0000", "ChargeRule": "PERQUANTITY",
+"PostingRule": "ONLYCHECKOUT", "ValidFrom": null,
+"ValidTo": null, "ischargealways": "0",
+"applyon_rateplan": "XXXXXXXXXXXXXXXXXX", "applyon_special": ""
+},
+{
+"ExtraChargeId": "XXXXXXXXXXXXXXXXXX",
+"ShortCode": "Transport", "charge": "Transport Services", "description": null,
+"Rate": "500.0000",
+"ChargeRule": "PERBOOKING", "PostingRule": "ONLYCHECKIN", "ValidFrom": null,
+"ValidTo": null, "ischargealways": "0", "applyon_rateplan": "ALL", "applyon_special": "ALL"
+}
+]
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+5	Recoverable Error. Equivalent to http 503.
+CheckDate	Check out date should be greater than Check in date
+DBConnectError	Database not connected.
+getExtraChargeListError	Extra Charge List error
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+UnknownError	Unknown Error
+4	Timeout requested. Stops requests for the specified time.
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+BadRequest	Bad request type.
+Meta SearchOpen
+Configuration
+Retrieve Salutations and Country
+This API provides information of salutations and country list available for your property which can be displayed in the external applications. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+
+URI Request
+
+Request parameters are supplied by appending a question mark (?) to the base URI, followed by a sequence of parameter names and values separated by an ampersand (&).
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&language=[LANGUAGE]
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “ConfiguredDetails”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en.
+Pass language code. Language codes are available here.	Optional Default is en
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=ConfiguredDetails&HotelCode=XXXX&APIKey=XXXXXX&language=en
+Response
+
+Name	Data Type	Description	Example
+Salution	String	Get salutation list	Dr,Jr
+Country List	String	Get country list	Afghanistan,Albania
+Success
+
+{
+"Salutation": { "DR": "Dr.",
+"JN": "Jn.",
+"MAM": "Mam.",
+"MR": "Mr.",
+"MRS": "Mrs.",
+"MS": "Ms.",
+"SIR": "Sir",
+"SR": "Sr."
+},
+"CountryList": {
+"1": "Afghanistan",
+"2": "Albania",
+
+        "3": "Algeria",
+.....
+}
+}
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+2	Cannot Parse Request
+5	Recoverable Error. Equivalent to http 503.
+DBConnectError	Database not connected.
+BadRequest	Bad request type.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+UnknownError	Unknown Error
+4	Timeout requested. Stops requests for the specified time.
+InvalidHotelCode	Invalid Hotel code.Please check your property code.
+Meta SearchOpen
+Configuration
+Retrieve Room Types
+This API provides limited information of roomtypes for a property which can be used for the mapping or display purpose in the external applications. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+
+URI Request
+
+Request parameters are supplied by appending a question mark (?) to the base URI, followed by a sequence of parameter names and values separated by an ampersand (&).
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&publishtoweb=1;
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “RoomTypeList”	
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en.
+Pass language code. Language codes are available here.	en
+publishtoweb	TINYINT(1)	1 – will retrieve all Room Types0 – will retrieve room types which are published to WEBDefault value is 0	0 OR 1
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=RoomTypeList&HotelCode=XXX&APIKey=XXX&language=en&publishtoweb=1
+Response
+
+Name	Data Type	Description	Example
+roomtypeunkid	INT(20)	Unique Room Type ID	123400000000000001
+roomtype	VARCHAR(255)	Room Type Name	Deluxe, Luxury
+base_adult_occupancy	INT(11)	Base adult occupancy in room	2
+base_child_occupancy	INT(11)	Base child occupancy in room	2
+max_adult_occupancy	INT(11)	Maximum adult occupancy in room	4
+max_child_occupancy	INT(11)	Maximum child occupancy in room	4
+Success
+
+[
+{
+"roomtypeunkid": "123400000000000001",
+"roomtype": "King",
+"shortcode": "KNG",
+"base_adult_occupancy": "2",
+"base_child_occupancy": "2",
+"max_adult_occupancy": "4",
+"max_child_occupancy": "4"
+},
+{
+"roomtypeunkid": "123400000000000004",
+"roomtype": "Deluxe",
+"shortcode": "DLX",
+"base_adult_occupancy": "5",
+"base_child_occupancy": "5",
+"max_adult_occupancy": "6",
+"max_child_occupancy": "7"
+},
+{
+"roomtypeunkid": "123400000000000006",
+"roomtype": "Suite River View",
+"shortcode": "SRV",
+"base_adult_occupancy": "3",
+"base_child_occupancy": "2",
+"max_adult_occupancy": "5",
+"max_child_occupancy": "3"
+}
+]
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+getRoomTypeListError	Room Type List error
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+Meta SearchOpen
+Configuration
+Retrieve Hotel Amenities
+This API provides list of hotels amenities of a property which is used for displaying on any website or external applications. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+
+URI Request:
+
+Request parameters are supplied by appending a question mark (?) to the base URI, followed by a sequence of parameter names and values separated by an ampersand (&).
+
+End Point URL
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY]&language=[LANGUAGE];
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[Request_Type] *	–	Use Keyword “HotelAmenity”	–
+[Hotel_Code] *	INT(11)	Unique Hotel code	XXXX
+[API_KEY] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXX
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en. 
+
+Pass language code. Language codes are available here.	en
+Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=HotelAmenity&HotelCode=XXX&APIKey=XXX&language=en
+Success
+
+[
+{
+"amenity": "Chinar Hotel @ Spa Naftalan"
+},
+{
+"amenity": "STD and IDD dialing access"
+},
+{
+"amenity": "parking lot"
+},
+{
+"amenity": "Fruit basket upon check-in"
+},
+]
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+HotelAmenityListingError	Hotel amenity listing error.
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
+Meta SearchOpen
+Configuration
+Retrieve Hotel Information
+This API provides the list of hotel information for groups or chains. This is mainly used for displaying data to the combo box only. The API can return data in JSON formats. The web service responds to HTTP GET requests.
+
+
+URL Request:
+
+Request parameters are supplied by appending a question mark (?) to the base URI, followed by a sequence of parameter names and values separated by an ampersand (&).
+
+End Point URL
+
+The base URI for the web service for Chain Properties is as follows :
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&GroupCode=[Group_Code]&APIKey=[API_KEY];
+The base URI for the web service for Single Property is as follows :
+
+[BaseUrl]booking/reservation_api/listing.php?request_type=[Request_Type]&HotelCode=[Hotel_Code]&APIKey=[API_KEY];
+Header
+
+–
+Parameter
+Name	Data Type	Description	Example
+[BaseUrl] *	–	Live server URL	https://live.ipms247.com/
+[request_type] *	–	Use Keyword “HotelList”	–
+[GroupCode] *
+[HotelCode] *	INT(11)	Unique Group code Or Hotel code	XXXXXX or XXXX
+[APIKey] *	VARCHAR(300)	Unique Authentication code	XXXXXXXXXXXXXXXXX
+[LANGUAGE]	VARCHAR(20)	[Optional] Default is en. 
+
+Pass language code. Language codes are available here.	en
+Single Properties – Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=HotelList&HotelCode=XXXX&APIKey=XXXXXX&language=en
+Chain Properties – Request 
+
+https://live.ipms247.com/booking/reservation_api/listing.php?request_type=HotelList&GroupCode=XXXXXX&APIKey=XXXXXX&language=en
+Success
+
+[
+{
+"Hotel_Code": "xxxx", 
+"Hotel_Name": "Hotel Abc", 
+"City": "Surat",
+"State": "Guj",
+"Country": "India",
+ "Property_Type": "Resort",
+ "HotelImages": [
+"abc1.jpg",
+"abc21.jpg",
+]
+},
+{
+"Hotel_Code": "xxxx", 
+"Hotel_Name": "Hotel ZY", 
+"City": "Surat",
+"State": "Gujarat",
+"Country": "India",
+ "Property_Type": "Hotel", 
+"HotelImages": [
+"img.jpg"
+]
+},
+]
+Error Codes
+
+Error Code	Error Name
+HotelCodeEmpty	Hotel code is empty.
+NORESACC	This request is valid for Reservation Account only. You may not have opted for Reservation Account Or Hotel Code and Authentication are invalid.
+UNAUTHREQ	Unauthorized request. This request is not valid for this hotel code.
+HotelListingError	Hotel List error
+-1	No Data found.
+APIACCESSDENIED	Your property doesn’t have access to API integration or Key is incorrect. Please contact support for this.
+ParametersMissing	Missing parameters.
