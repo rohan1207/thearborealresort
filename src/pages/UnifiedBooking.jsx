@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -426,12 +426,6 @@ const UnifiedBooking = () => {
     const requestedChildren = parseInt(children || 0);
     const minRoomsNeeded = calculateMinimumRooms(requestedAdults, requestedChildren);
 
-    console.log('[Availability Check]', {
-      requestedAdults,
-      requestedChildren,
-      calculatedMinRooms: minRoomsNeeded
-    });
-
     setSearchLoading(true);
 
     try {
@@ -457,10 +451,10 @@ const UnifiedBooking = () => {
       // Filter rooms based on:
       // 1. Occupancy rules (validateOccupancy) - with number of rooms
       // 2. Available rooms count from eZee
+      // Optimized: Pre-compute values outside filter loop
       const filteredRooms = roomData.filter((room) => {
         // Check occupancy rules with number of rooms
         if (!validateOccupancy(room, requestedAdults, requestedChildren, minRoomsNeeded)) {
-          console.log(`[Room Filter] ${room.Room_Name}: Failed occupancy validation for ${minRoomsNeeded} room(s)`);
           return false;
         }
 
@@ -469,18 +463,14 @@ const UnifiedBooking = () => {
         const minAvailableRooms = parseInt(room.min_ava_rooms || "0", 10);
         
         // Check if we have enough available rooms for the minimum rooms needed
-        // We need at least minRoomsNeeded rooms available
         if (minAvailableRooms < minRoomsNeeded) {
-          console.log(`[Room Filter] ${room.Room_Name}: Insufficient availability. Need ${minRoomsNeeded}, have ${minAvailableRooms}`);
           return false;
         }
 
         // Also check per-date availability if available_rooms has date-specific data
-        const checkInDate = checkInStr;
-        if (availableRoomsData[checkInDate]) {
-          const availableForDate = parseInt(availableRoomsData[checkInDate] || "0", 10);
+        if (availableRoomsData[checkInStr]) {
+          const availableForDate = parseInt(availableRoomsData[checkInStr] || "0", 10);
           if (availableForDate < minRoomsNeeded) {
-            console.log(`[Room Filter] ${room.Room_Name}: Insufficient availability for ${checkInDate}. Need ${minRoomsNeeded}, have ${availableForDate}`);
             return false;
           }
         }
@@ -488,14 +478,7 @@ const UnifiedBooking = () => {
         return true;
       });
 
-      console.log('[Room Filtering Results]', {
-        totalRoomsFromEzee: roomData.length,
-        filteredRooms: filteredRooms.length,
-        minRoomsNeeded,
-        requestedAdults,
-        requestedChildren
-      });
-
+      // Set state immediately - don't wait for anything
       setAvailableRooms(filteredRooms);
       setSearchData({
         checkIn: checkInStr,
@@ -505,26 +488,7 @@ const UnifiedBooking = () => {
         children: requestedChildren,
       });
       
-      // NEW: Save inquiry to database (non-blocking - don't affect user flow if it fails)
-      if (guestName && guestPhone) {
-        try {
-          await axios.post(`${API_BASE_URL}/api/inquiries`, {
-            name: guestName,
-            phone: guestPhone,
-            email: "", // Email is collected later in personal info step
-            checkIn: checkInStr,
-            checkOut: checkOutStr,
-            rooms: minRoomsNeeded,
-            adults: requestedAdults,
-            children: requestedChildren,
-          });
-          console.log('Inquiry saved successfully');
-        } catch (inquiryError) {
-          console.error('Failed to save inquiry (non-critical):', inquiryError);
-          // Don't block the user flow if inquiry save fails
-        }
-      }
-      
+      // Move to next step immediately - don't block on inquiry save
       if (filteredRooms.length === 0) {
         Swal.fire({
           icon: "info",
@@ -533,22 +497,29 @@ const UnifiedBooking = () => {
           confirmButtonColor: "#000000",
         });
       } else {
-        setCurrentStep(2); // Move to room selection only if we have rooms
+        setCurrentStep(2); // Move to room selection immediately
+      }
+      
+      // Save inquiry to database (truly non-blocking - fire and forget)
+      // This runs in background and doesn't affect user flow
+      if (guestName && guestPhone) {
+        axios.post(`${API_BASE_URL}/api/inquiries`, {
+          name: guestName,
+          phone: guestPhone,
+          email: "", // Email is collected later in personal info step
+          checkIn: checkInStr,
+          checkOut: checkOutStr,
+          rooms: minRoomsNeeded,
+          adults: requestedAdults,
+          children: requestedChildren,
+        }).catch((inquiryError) => {
+          // Silently fail - don't log to console in production to avoid noise
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to save inquiry (non-critical):', inquiryError);
+          }
+        });
       }
     } catch (err) {
-      console.error("Search error:", err);
-      console.error("Search error details:", {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        config: {
-          url: err.config?.url,
-          method: err.config?.method,
-          data: err.config?.data
-        }
-      });
-      
       // Set availableRooms to empty array to prevent map error
       setAvailableRooms([]);
       
@@ -556,7 +527,7 @@ const UnifiedBooking = () => {
       const errorMessage = 
         err.response?.data?.Errors?.ErrorMessage || 
         err.response?.data?.message || 
-        (err.response?.data ? JSON.stringify(err.response.data) : err.message) ||
+        err.message ||
         "Failed to fetch available rooms. Please try again.";
       
       Swal.fire({
@@ -2153,22 +2124,15 @@ const UnifiedBooking = () => {
                   {availableRooms.map((room, index) => {
                     const displayName = room.Room_Name || room.Roomtype_Name;
                     const roomData = findRoomByName(displayName);
-                    const roomRates = calculateRoomRates(room);
                     
-                    // Debug: Log price calculation for listing
-                    if (roomRates) {
-                      console.log(`[Room Listing Price - ${displayName}]`, {
-                        roomBaseTotal: roomRates.roomBaseTotal,
-                        extrasTotal: roomRates.extrasTotal,
-                        total: roomRates.total,
-                        nights: roomRates.nights,
-                        pricePerNight: Math.round(roomRates.roomBaseTotal / (roomRates.nights || 1)),
-                        note: 'Displaying roomBaseTotal per night (base rate only, no extra guests)'
-                      });
-                    }
-                    
+                    // Don't calculate full rates during render - only when rates card is expanded
+                    // For listing view, we use calculateBaseRateOnly which is much faster
                     const isRatesExpanded = expandedRates === room.roomrateunkid;
                     const isDetailsExpanded = expandedDetails === room.roomrateunkid;
+                    
+                    // Calculate room rates only when expanded (lazy loading for performance)
+                    // This prevents blocking the UI during initial render
+                    const roomRates = isRatesExpanded ? calculateRoomRates(room) : null;
                     const canonicalName =
                       roomData?.baseName ||
                       sanitizeRoomName(displayName) ||
@@ -2181,7 +2145,7 @@ const UnifiedBooking = () => {
                         <motion.div
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
+                          transition={{ delay: Math.min(index * 0.05, 0.2) }}
                           className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200"
                         >
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
@@ -2192,6 +2156,8 @@ const UnifiedBooking = () => {
                                   src={room.room_main_image}
                                   alt={room.Room_Name || "Room"}
                                   className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
@@ -2291,8 +2257,7 @@ const UnifiedBooking = () => {
                         </motion.div>
 
                         {/* Expanded Rates Card */}
-                       {isRatesExpanded && (() => {
-                         const roomRates = calculateRoomRates(room);
+                       {isRatesExpanded && roomRates && (() => {
                          const breakdown = roomRates?.breakdown;
                          return (
                           <motion.div
