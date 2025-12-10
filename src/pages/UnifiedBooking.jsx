@@ -30,20 +30,22 @@ const UnifiedBooking = () => {
   const [selectedCheckIn, setSelectedCheckIn] = useState(null);
   const [selectedCheckOut, setSelectedCheckOut] = useState(null);
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
-  const [rooms, setRooms] = useState(1); // Will be calculated automatically based on adults/children
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
+  const [rooms, setRooms] = useState(1); // Number of rooms requested
+  const [adults, setAdults] = useState(2); // Total adults (auto-set based on rooms)
+  const [children, setChildren] = useState(0); // Total children
   const [searchLoading, setSearchLoading] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   
   // Step 2: Room selection state
   const [availableRooms, setAvailableRooms] = useState([]);
-  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedRoomsCart, setSelectedRoomsCart] = useState([]); // Cart for selected rooms
   const [searchData, setSearchData] = useState(null);
   const [expandedRates, setExpandedRates] = useState(null); // roomrateunkid of expanded rates card
   const [expandedDetails, setExpandedDetails] = useState(null); // roomrateunkid of expanded details card
   const [showBookingConditions, setShowBookingConditions] = useState(false);
+  // Track adult/child selection for each room in expanded card (before adding to cart)
+  const [expandedRoomSelections, setExpandedRoomSelections] = useState({}); // { roomrateunkid: { adults, children } }
   
   // Step 3: Personal Info state
   const [personalInfo, setPersonalInfo] = useState({
@@ -103,156 +105,38 @@ const UnifiedBooking = () => {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-  // Occupancy validation based on room type and max occupancy rules
-  // numRooms: number of rooms being requested (defaults to 1)
-  const validateOccupancy = (room, requestedAdults, requestedChildren, numRooms = 1) => {
-    const roomName = sanitizeRoomName(room.Room_Name || room.Roomtype_Name || "");
+  // Get max adults and children options based on number of rooms
+  const getMaxAdultsForRooms = (numRooms) => {
+    return numRooms * 2; // 2 adults per room
+  };
+
+  const getMaxChildrenForRooms = (numRooms) => {
+    // Max children per room varies, but we'll use a conservative estimate
+    const maxPerRoom = [0, 1, 2, 2, 2, 2]; // For 1-5 rooms
+    return numRooms <= 5 ? maxPerRoom[numRooms] : 2;
+  };
+
+  // Validate occupancy for a single room (used in cart)
+  const validateRoomOccupancy = (room, adults, children) => {
     const maxAdults = parseInt(room.max_adult_occupancy || "0", 10);
     const maxChildren = parseInt(room.max_child_occupancy || "0", 10);
     
-    // For multiple rooms, scale the max occupancy
-    const totalMaxAdults = maxAdults * numRooms;
-    const totalMaxChildren = maxChildren * numRooms;
-    
-    // Check if requested exceeds total max occupancy
-    if (requestedAdults > totalMaxAdults || requestedChildren > totalMaxChildren) {
+    if (adults > maxAdults || children > maxChildren) {
       return false;
     }
     
-    // For single room, apply special rules
-    if (numRooms === 1) {
-      // Special rules based on room type
-      if (roomName.toLowerCase().includes("classic sunroom")) {
-        // Max: 2 Adults/1 Child
-        if (requestedAdults > 2 || requestedChildren > 1) return false;
-        if (requestedAdults === 2 && requestedChildren === 1) return true;
-        if (requestedAdults <= 2 && requestedChildren <= 1) return true;
-        return false;
-      }
-      
-      if (roomName.toLowerCase().includes("forest bathtub") || 
-          roomName.toLowerCase().includes("luxury sunroom")) {
-        // Max: 3 Adults/2 Children, but NOT 3 Adults/2 Children together
-        if (requestedAdults > 3 || requestedChildren > 2) return false;
-        if (requestedAdults === 3 && requestedChildren === 2) return false; // Not allowed
-        if (requestedAdults <= 3 && requestedChildren <= 2) return true;
-        return false;
-      }
-      
-      if (roomName.toLowerCase().includes("forest private pool")) {
-        // Max: 3 Adults/1 Child, but NOT 3 Adults/1 Child together
-        if (requestedAdults > 3 || requestedChildren > 1) return false;
-        if (requestedAdults === 3 && requestedChildren === 1) return false; // Not allowed
-        if (requestedAdults <= 3 && requestedChildren <= 1) return true;
-        return false;
-      }
-    } else {
-      // For multiple rooms, we need to check if the combination can be distributed
-      // For 2+ rooms, the special disallowed combinations don't apply the same way
-      // because we can distribute guests across multiple rooms
-      
-      // Check if total fits within scaled max occupancy
-      const totalPeople = requestedAdults + requestedChildren;
-      const maxPeoplePerRoom = roomName.toLowerCase().includes("classic sunroom") ? 3 : 4;
-      const totalMaxPeople = maxPeoplePerRoom * numRooms;
-      
-      if (totalPeople > totalMaxPeople) {
-        return false;
-      }
-      
-      // Additional validation: ensure we can distribute guests
-      // For now, if it fits in total max, we allow it
-      // The actual distribution will be handled by eZee
-      return true;
+    // Check special disallowed combinations
+    const roomName = sanitizeRoomName(room.Room_Name || room.Roomtype_Name || "").toLowerCase();
+    
+    if (roomName.includes("forest bathtub") || roomName.includes("luxury sunroom")) {
+      if (adults === 3 && children === 2) return false;
     }
     
-    // Default: check against max occupancy
-    return requestedAdults <= totalMaxAdults && requestedChildren <= totalMaxChildren;
-  };
-
-  // Calculate minimum rooms needed based on adults and children
-  // This uses the occupancy rules: base and max occupancy per room type
-  const calculateMinimumRooms = (requestedAdults, requestedChildren) => {
-    // Room type configurations (per room)
-    const roomConfigs = {
-      "classic sunroom": {
-        baseAdults: 2,
-        baseChildren: 0,
-        maxAdults: 2,
-        maxChildren: 1,
-        maxPeople: 3
-      },
-      "forest bathtub": {
-        baseAdults: 2,
-        baseChildren: 0,
-        maxAdults: 3,
-        maxChildren: 2,
-        maxPeople: 4,
-        // Special rule: 3A/2C not allowed
-        disallowed: [{ adults: 3, children: 2 }]
-      },
-      "luxury sunroom": {
-        baseAdults: 2,
-        baseChildren: 0,
-        maxAdults: 3,
-        maxChildren: 2,
-        maxPeople: 4,
-        // Special rule: 3A/2C not allowed
-        disallowed: [{ adults: 3, children: 2 }]
-      },
-      "forest private pool": {
-        baseAdults: 2,
-        baseChildren: 0,
-        maxAdults: 3,
-        maxChildren: 1,
-        maxPeople: 3,
-        // Special rule: 3A/1C not allowed
-        disallowed: [{ adults: 3, children: 1 }]
-      }
-    };
-
-    // Check if it fits in 1 room
-    for (const [roomType, config] of Object.entries(roomConfigs)) {
-      // Check if disallowed combination
-      const isDisallowed = config.disallowed?.some(
-        rule => rule.adults === requestedAdults && rule.children === requestedChildren
-      );
-      if (isDisallowed) continue;
-
-      // Check if fits in max occupancy
-      if (requestedAdults <= config.maxAdults && requestedChildren <= config.maxChildren) {
-        const totalPeople = requestedAdults + requestedChildren;
-        if (totalPeople <= config.maxPeople) {
-          return 1; // Can fit in 1 room
-        }
-      }
+    if (roomName.includes("forest private pool")) {
+      if (adults === 3 && children === 1) return false;
     }
-
-    // If doesn't fit in 1 room, calculate for multiple rooms
-    // For 2+ rooms, base and max occupancy scale with number of rooms
-    // Example: 2 rooms = 4A/0C base, 6A/4C max, 8 people max
-    for (let numRooms = 2; numRooms <= 4; numRooms++) {
-      const totalBaseAdults = numRooms * 2; // 2 adults base per room
-      const totalBaseChildren = numRooms * 0; // 0 children base per room
-      const totalMaxAdults = numRooms * 3; // Max 3 adults per room
-      const totalMaxChildren = numRooms * 2; // Max 2 children per room
-      const totalMaxPeople = numRooms * 4; // Max 4 people per room
-
-      // Check if requested fits within max limits
-      if (requestedAdults <= totalMaxAdults && 
-          requestedChildren <= totalMaxChildren) {
-        const totalPeople = requestedAdults + requestedChildren;
-        if (totalPeople <= totalMaxPeople) {
-          // Additional check: for multiple rooms, we need to ensure the combination
-          // can be distributed across rooms without violating per-room rules
-          // For now, we'll use a simple check - if it fits in max, it should work
-          // The actual room filtering will happen based on eZee's available rooms
-          return numRooms;
-        }
-      }
-    }
-
-    return 4; // Maximum allowed (fallback)
+    
+      return true;
   };
 
   // Calendar helpers
@@ -421,10 +305,9 @@ const UnifiedBooking = () => {
       return;
     }
 
-    // Calculate minimum rooms needed based on adults and children
     const requestedAdults = parseInt(adults);
     const requestedChildren = parseInt(children || 0);
-    const minRoomsNeeded = calculateMinimumRooms(requestedAdults, requestedChildren);
+    const requestedRooms = parseInt(rooms);
 
     setSearchLoading(true);
 
@@ -432,68 +315,67 @@ const UnifiedBooking = () => {
       const checkInStr = formatDateForAPI(selectedCheckIn);
       const checkOutStr = formatDateForAPI(selectedCheckOut);
       
-      // Call eZee API for availability with calculated minimum rooms
+      // Call eZee API for availability - eZee will filter rooms automatically
       const response = await axios.post(`${API_BASE_URL}/api/booking/search`, {
         checkIn: checkInStr,
         checkOut: checkOutStr,
-        rooms: minRoomsNeeded, // Use calculated minimum rooms
+        rooms: requestedRooms,
         adults: requestedAdults,
         children: requestedChildren,
       });
+
+      // Log the response for debugging
+      console.log('API Response:', response.data);
 
       // Check if there's an error in the response
       if (response.data.Errors) {
-        throw new Error(response.data.Errors.ErrorMessage || 'Failed to fetch rooms. Please try again.');
+        const errorMessage = response.data.Errors.ErrorMessage || 'No rooms available';
+        console.log('API Error:', errorMessage);
+        // Set empty rooms array and show error
+        setAvailableRooms([]);
+        Swal.fire({
+          icon: "info",
+          title: "No Rooms Available",
+          text: errorMessage,
+          confirmButtonColor: "#000000",
+        });
+        setSearchLoading(false);
+        return;
       }
       
-      const roomData = Array.isArray(response.data.data) ? response.data.data : [];
+      // Get room data - handle both array and object responses
+      let roomData = [];
+      if (Array.isArray(response.data.data)) {
+        roomData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        roomData = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // If it's an object, check if it has a data property
+        roomData = response.data.data || [];
+      }
       
-      // Filter rooms based on:
-      // 1. Occupancy rules (validateOccupancy) - with number of rooms
-      // 2. Available rooms count from eZee
-      // Optimized: Pre-compute values outside filter loop
-      const filteredRooms = roomData.filter((room) => {
-        // Check occupancy rules with number of rooms
-        if (!validateOccupancy(room, requestedAdults, requestedChildren, minRoomsNeeded)) {
-          return false;
-        }
-
-        // Check available rooms from eZee
-        const availableRoomsData = room.available_rooms || {};
-        const minAvailableRooms = parseInt(room.min_ava_rooms || "0", 10);
-        
-        // Check if we have enough available rooms for the minimum rooms needed
-        if (minAvailableRooms < minRoomsNeeded) {
-          return false;
-        }
-
-        // Also check per-date availability if available_rooms has date-specific data
-        if (availableRoomsData[checkInStr]) {
-          const availableForDate = parseInt(availableRoomsData[checkInStr] || "0", 10);
-          if (availableForDate < minRoomsNeeded) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      // Set state immediately - don't wait for anything
-      setAvailableRooms(filteredRooms);
+      console.log('Room data extracted:', roomData.length, 'rooms');
+      
+      // Use whatever eZee API returns - no custom filtering
+      // eZee API already handles all filtering based on availability, occupancy, etc.
+      setAvailableRooms(roomData);
       setSearchData({
         checkIn: checkInStr,
         checkOut: checkOutStr,
-        rooms: minRoomsNeeded, // Store calculated rooms
+        rooms: requestedRooms,
         adults: requestedAdults,
         children: requestedChildren,
       });
       
-      // Move to next step immediately - don't block on inquiry save
-      if (filteredRooms.length === 0) {
+      // Reset cart when starting new search
+      setSelectedRoomsCart([]);
+      
+      // Move to next step immediately
+      if (roomData.length === 0) {
         Swal.fire({
           icon: "info",
           title: "No Rooms Available",
-          text: `No rooms available for ${requestedAdults} adults and ${requestedChildren} children. Please adjust your selection.`,
+          text: `No rooms available for ${requestedRooms} room(s), ${requestedAdults} adults and ${requestedChildren} children. Please adjust your selection.`,
           confirmButtonColor: "#000000",
         });
       } else {
@@ -501,19 +383,17 @@ const UnifiedBooking = () => {
       }
       
       // Save inquiry to database (truly non-blocking - fire and forget)
-      // This runs in background and doesn't affect user flow
       if (guestName && guestPhone) {
         axios.post(`${API_BASE_URL}/api/inquiries`, {
           name: guestName,
           phone: guestPhone,
-          email: "", // Email is collected later in personal info step
+          email: "",
           checkIn: checkInStr,
           checkOut: checkOutStr,
-          rooms: minRoomsNeeded,
+          rooms: requestedRooms,
           adults: requestedAdults,
           children: requestedChildren,
         }).catch((inquiryError) => {
-          // Silently fail - don't log to console in production to avoid noise
           if (process.env.NODE_ENV === 'development') {
             console.error('Failed to save inquiry (non-critical):', inquiryError);
           }
@@ -541,32 +421,129 @@ const UnifiedBooking = () => {
     }
   };
 
-  // Step 2: Select Room
-  const handleSelectRoom = (room) => {
-    setSelectedRoom(room);
+  // Step 2: Add room to cart (using selections from expanded card)
+  const handleAddRoomToCart = (room) => {
+    const requestedRooms = parseInt(searchData?.rooms || 1);
+    
+    // Check if cart is already full
+    if (selectedRoomsCart.length >= requestedRooms) {
+      Swal.fire({
+        icon: "info",
+        title: "Cart Full",
+        text: `You can only select ${requestedRooms} room(s). Please proceed to checkout or remove a room from cart.`,
+        confirmButtonColor: "#000000",
+      });
+      return;
+    }
 
-    const roomRates = calculateRoomRates(room);
-    const nights = roomRates?.nights || calculateNights();
+    // Check available rooms count
+    const minAvailableRooms = parseInt(room.min_ava_rooms || "0", 10);
+    const roomsInCartOfSameType = selectedRoomsCart.filter(
+      r => r.room.roomrateunkid === room.roomrateunkid
+    ).length;
+    
+    if (roomsInCartOfSameType >= minAvailableRooms) {
+      Swal.fire({
+        icon: "error",
+        title: "Not Available",
+        text: `Only ${minAvailableRooms} room(s) of this type available.`,
+        confirmButtonColor: "#000000",
+      });
+      return;
+    }
 
-    console.log(`[handleSelectRoom] Setting booking details:`, {
-      roomName: room.Room_Name,
-      baseTotal: roomRates?.roomBaseTotal,
-      extrasTotal: roomRates?.extrasTotal,
-      total: roomRates?.total,
-      nights: nights,
-      extraAdults: roomRates?.extraAdults,
-      extraChildren: roomRates?.extraChildren,
-      breakdown: roomRates?.breakdown
+    // Get selections from expanded card, or use defaults
+    const selection = expandedRoomSelections[room.roomrateunkid] || {
+      adults: parseInt(room.base_adult_occupancy || "2", 10),
+      children: 0
+    };
+    
+    // Validate occupancy
+    if (!validateRoomOccupancy(room, selection.adults, selection.children)) {
+      const maxOccupancy = room.max_occupancy || "3";
+      Swal.fire({
+        icon: "error",
+        title: "Max Occupancy Exceeded",
+        text: `This room can accommodate maximum ${maxOccupancy} guests.`,
+        confirmButtonColor: "#000000",
+      });
+      return;
+    }
+    
+    const newCartItem = {
+      id: Date.now() + Math.random(), // Unique ID for cart item
+      room: room,
+      adults: selection.adults,
+      children: selection.children,
+      rates: null, // Will be calculated when needed
+    };
+
+    const updatedCart = [...selectedRoomsCart, newCartItem];
+    setSelectedRoomsCart(updatedCart);
+    
+    // Auto-scroll to cart section when required rooms are selected
+    if (updatedCart.length >= requestedRooms) {
+      setTimeout(() => {
+        const cartElement = document.getElementById('selected-rooms-cart');
+        if (cartElement) {
+          cartElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 300);
+    }
+  };
+
+  // Remove room from cart
+  const handleRemoveRoomFromCart = (cartItemId) => {
+    setSelectedRoomsCart(selectedRoomsCart.filter(item => item.id !== cartItemId));
+  };
+
+  // Update room occupancy in cart
+  const handleUpdateCartRoomOccupancy = (cartItemId, adults, children) => {
+    setSelectedRoomsCart(selectedRoomsCart.map(item => {
+      if (item.id === cartItemId) {
+        return { ...item, adults, children };
+      }
+      return item;
+    }));
+  };
+
+  // Proceed to checkout (Step 3)
+  const handleProceedToCheckout = () => {
+    const requestedRooms = parseInt(searchData?.rooms || 1);
+    
+    if (selectedRoomsCart.length !== requestedRooms) {
+      Swal.fire({
+        icon: "error",
+        title: "Incomplete Selection",
+        text: `Please select ${requestedRooms} room(s) before proceeding.`,
+        confirmButtonColor: "#000000",
+      });
+      return;
+    }
+
+    // Calculate rates for all rooms in cart
+    const nights = calculateNights();
+    let totalPrice = 0;
+    let totalExtras = 0;
+    const cartWithRates = selectedRoomsCart.map(item => {
+      const roomRates = calculateRoomRatesForCart(item.room, item.adults, item.children);
+      const roomTotal = (roomRates?.roomBaseTotal || 0) + (roomRates?.extrasTotal || 0);
+      totalPrice += roomRates?.roomBaseTotal || 0;
+      totalExtras += roomRates?.extrasTotal || 0;
+      return {
+        ...item,
+        rates: roomRates,
+        total: roomTotal,
+      };
     });
 
     setBookingDetails({
       checkIn: searchData.checkIn,
       checkOut: searchData.checkOut,
       nights,
-      totalPrice: roomRates?.roomBaseTotal || 0, // Base rate
-      extrasCharge: roomRates?.extrasTotal || 0, // Extra guests charge (for payment calculation)
-      breakdown: roomRates?.breakdown || null, // Detailed breakdown
-      roomRates: roomRates, // Store full room rates for breakdown display
+      totalPrice,
+      extrasCharge: totalExtras,
+      cart: cartWithRates,
     });
 
     setCurrentStep(3); // Move to personal info
@@ -632,27 +609,13 @@ const UnifiedBooking = () => {
   const titles = ["Mr.", "Mrs.", "Ms.", "Dr.", "Prof."];
   const genders = ["Male", "Female", "Other"];
 
-  // Payment functions (replicated from BookingPayment.jsx)
+  // Payment functions - Updated for multi-room support
   const prepareBookingPayload = () => {
-    console.log("=== Preparing Booking Payload ===");
-    console.log("Room data:", selectedRoom);
+    console.log("=== Preparing Multi-Room Booking Payload ===");
+    console.log("Cart items:", bookingDetails?.cart);
     console.log("Personal Info:", personalInfo);
     console.log("Search Data:", searchData);
     console.log("Booking Details:", bookingDetails);
-    
-    // Log the critical IDs
-    console.log("=== CRITICAL IDS FROM ROOM OBJECT ===");
-    console.log("Package_Id (will be used for Rateplan_Id):", selectedRoom.Package_Id);
-    console.log("roomrateunkid:", selectedRoom.roomrateunkid);
-    console.log("ratetypeunkid (Ratetype_Id):", selectedRoom.ratetypeunkid);
-    console.log("roomtypeunkid (Roomtype_Id):", selectedRoom.roomtypeunkid);
-    console.log("rack_rate (baserate):", selectedRoom.room_rates_info?.rack_rate);
-    console.log("extra_adult rack_rate:", selectedRoom.extra_adult_rates_info?.rack_rate);
-    console.log("extra_child rack_rate:", selectedRoom.extra_child_rates_info?.rack_rate);
-    console.log("\n=== RATE INFO STRUCTURE ===");
-    console.log("room_rates_info.exclusive_tax:", selectedRoom.room_rates_info?.exclusive_tax);
-    console.log("extra_adult_rates_info.exclusive_tax:", selectedRoom.extra_adult_rates_info?.exclusive_tax);
-    console.log("extra_child_rates_info.exclusive_tax:", selectedRoom.extra_child_rates_info?.exclusive_tax);
 
     // Validate required fields
     if (!personalInfo?.email) {
@@ -670,6 +633,9 @@ const UnifiedBooking = () => {
     if (!bookingDetails?.checkOut) {
       throw new Error("Check-out date is required");
     }
+    if (!bookingDetails?.cart || bookingDetails.cart.length === 0) {
+      throw new Error("No rooms selected in cart");
+    }
 
     // CRITICAL: Validate check-in date is not in the past
     const today = new Date();
@@ -686,8 +652,6 @@ const UnifiedBooking = () => {
     }
 
     // Helper to build nightly rate strings (comma separated) as required by eZee for multiple nights
-    // IMPORTANT: This applies discount to base rate before sending to eZee
-    // eZee will then add their own GST on top of this discounted rate
     const buildNightlyRateString = (rateInfo) => {
       const exclusiveRates = rateInfo?.exclusive_tax || {};
       const fallbackRate =
@@ -709,20 +673,9 @@ const UnifiedBooking = () => {
             : fallbackRate;
         
         // Apply 20% discount to the base rate before sending to eZee
-        // eZee will handle GST calculation on their side
-        // IMPORTANT: Round to 2 decimals to match eZee's precision (not integer)
         const originalRate = parseFloat(nightlyRateValue ?? 0);
         const discountedRate = originalRate * (1 - DISCOUNT_RATE);
-        const roundedRate = Math.round(discountedRate * 100) / 100; // Round to 2 decimals
-        
-        console.log(`[buildNightlyRateString] Night ${i + 1} (${dateKey}):`, {
-          originalRate,
-          discountPercent: `${DISCOUNT_RATE * 100}%`,
-          discountedRate,
-          roundedRate,
-          sentToEzee: roundedRate,
-          note: 'Rounded to 2 decimals to match eZee precision'
-        });
+        const roundedRate = Math.round(discountedRate * 100) / 100;
         
         nightlyRates.push(String(roundedRate));
       }
@@ -730,57 +683,54 @@ const UnifiedBooking = () => {
       return nightlyRates.join(", ");
     };
 
-    // Build nightly rate strings for base, extra adult, and extra child
-    const baseRate = buildNightlyRateString(selectedRoom.room_rates_info);
-    const extraAdultRate = buildNightlyRateString(
-      selectedRoom.extra_adult_rates_info
-    );
-    const extraChildRate = buildNightlyRateString(
-      selectedRoom.extra_child_rates_info
-    );
+    // Build Room_Details object with all rooms from cart
+    const roomDetails = {};
+    bookingDetails.cart.forEach((cartItem, index) => {
+      const room = cartItem.room;
+      const roomNumber = index + 1;
+      
+      // Build nightly rate strings for this room
+      const baseRate = buildNightlyRateString(room.room_rates_info);
+      const extraAdultRate = buildNightlyRateString(room.extra_adult_rates_info);
+      const extraChildRate = buildNightlyRateString(room.extra_child_rates_info);
 
-    const roomDetails = {
-      Rateplan_Id: String(selectedRoom.roomrateunkid || ""),
-      Ratetype_Id: String(selectedRoom.ratetypeunkid || ""),
-      Roomtype_Id: String(selectedRoom.roomtypeunkid || ""),
+      const roomDetail = {
+        Rateplan_Id: String(room.roomrateunkid || ""),
+        Ratetype_Id: String(room.ratetypeunkid || ""),
+        Roomtype_Id: String(room.roomtypeunkid || ""),
       baserate: baseRate,
       extradultrate: extraAdultRate,
       extrachildrate: extraChildRate,
-      number_adults: String(searchData.adults),
-      number_children: String(searchData.children || 0),
+        number_adults: String(cartItem.adults),
+        number_children: String(cartItem.children || 0),
       Title: "",
       First_Name: String(personalInfo.firstName || ""),
       Last_Name: String(personalInfo.lastName || ""),
       Gender: "",
-      SpecialRequest: "",
+        SpecialRequest: personalInfo.specialRequest || "",
     };
 
     // CRITICAL: ExtraChild_Age is MANDATORY if number_children > 0
-    if (searchData.children > 0) {
-      roomDetails.ExtraChild_Age = "5";
-    }
-    
-    console.log("=== CONSTRUCTED ROOM DETAILS ===");
-    console.log(JSON.stringify(roomDetails, null, 2));
-    console.log("=== BASERATE SENT TO EZEE ===");
-    console.log("baserate:", baseRate);
-    console.log("Note: This should be the DISCOUNTED base rate (20% off), eZee will apply GST");
-    console.log("=== PAYMENT CONFIGURATION ===");
-    console.log("Booking_Payment_Mode:", "3 (Fully collected - as per eZee recommendation)");
-    console.log("paymenttypeunkid:", selectedGateway || "Not set");
-    console.log("[IMPORTANT]: Email will be sent when ProcessBooking (ConfirmBooking) is called");
-    console.log("[IMPORTANT]: Email should reflect Booking_Payment_Mode: '3' showing payment as collected");
+      if (cartItem.children > 0) {
+        roomDetail.ExtraChild_Age = "5";
+      }
 
-    // Build booking payload - EXACTLY matching Postman collection example
+      roomDetails[`Room_${roomNumber}`] = roomDetail;
+      
+      console.log(`=== Room ${roomNumber} Details ===`);
+      console.log(`Room Name: ${room.Room_Name}`);
+      console.log(`Adults: ${cartItem.adults}, Children: ${cartItem.children}`);
+      console.log(`Rateplan_Id: ${room.roomrateunkid}`);
+    });
+
+    // Build booking payload
     const bookingPayload = {
-      Room_Details: {
-        Room_1: roomDetails,
-      },
+      Room_Details: roomDetails,
       check_in_date: bookingDetails.checkIn,
       check_out_date: bookingDetails.checkOut,
-      Booking_Payment_Mode: "3", // "3" = Fully collected amount (as per eZee recommendation - must be string)
+      Booking_Payment_Mode: "3", // "3" = Fully collected amount
       Email_Address: personalInfo.email,
-      Source_Id: "", // "WEB" = Booking Engine source (required for proper email payment status)
+      Source_Id: "", // "WEB" = Booking Engine source
       MobileNo: personalInfo.phone || "",
       Address: personalInfo.address || "",
       State: personalInfo.state || "",
@@ -790,34 +740,84 @@ const UnifiedBooking = () => {
       Fax: "",
       Device: "",
       Languagekey: "",
-      paymenttypeunkid: selectedGateway || "" // Payment gateway ID from eZee (Razorpay gateway ID)
+      paymenttypeunkid: selectedGateway || ""
     };
 
-    // Log Source_Id after bookingPayload is created
-    console.log("Source_Id:", bookingPayload.Source_Id || "Not set");
-    
-    console.log(
-      "Extras disabled for testing. Selected extras:",
-      selectedExtras
-    );
-
-    console.log(
-      "Final booking payload:",
-      JSON.stringify(bookingPayload, null, 2)
-    );
+    console.log("=== Final Multi-Room Booking Payload ===");
+    console.log(JSON.stringify(bookingPayload, null, 2));
     return bookingPayload;
+  };
+
+  // Helper function to ensure Razorpay script is loaded
+  const loadRazorpayScript = () => {
+    return new Promise((resolve, reject) => {
+      // Check if Razorpay is already loaded
+      if (window.Razorpay && typeof window.Razorpay === 'function') {
+        console.log("✅ Razorpay already loaded");
+        resolve();
+        return;
+      }
+
+      console.log("⏳ Waiting for Razorpay to load...");
+      
+      // Script should already be in HTML, just wait for it to be available
+      let attempts = 0;
+      const maxAttempts = 100; // 10 seconds max wait (100 * 100ms)
+      
+      const checkInterval = setInterval(() => {
+        attempts++;
+        if (window.Razorpay && typeof window.Razorpay === 'function') {
+          clearInterval(checkInterval);
+          console.log(`✅ Razorpay loaded after ${attempts * 100}ms`);
+          resolve();
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.error("❌ Razorpay failed to load after 10 seconds");
+          reject(new Error("Razorpay script failed to load. Please refresh the page and try again."));
+        }
+      }, 100);
+    });
   };
 
   const openRazorpayPopup = async (reservationNo, totalAmount) => {
     try {
       console.log("\n=== STEP 2: Opening Razorpay Popup ===");
+      console.log("Checking Razorpay availability...");
+      console.log("window.Razorpay:", window.Razorpay);
+      console.log("typeof window.Razorpay:", typeof window.Razorpay);
+      
+      // Ensure Razorpay script is loaded
+      try {
+        await loadRazorpayScript();
+      } catch (loadError) {
+        console.error("Error loading Razorpay script:", loadError);
+        // Try one more time with a simple check
+        if (!window.Razorpay) {
+          throw new Error("Razorpay script failed to load. Please refresh the page and try again.");
+        }
+      }
+      
+      // Verify Razorpay is available
+      if (!window.Razorpay || typeof window.Razorpay !== 'function') {
+        console.error("Razorpay constructor not available:", {
+          exists: !!window.Razorpay,
+          type: typeof window.Razorpay,
+          value: window.Razorpay
+        });
+        throw new Error("Razorpay is not available. Please refresh the page and try again.");
+      }
+      
+      console.log("Razorpay is available, proceeding...");
+      
+      // Get currency from first room in cart
+      const currencyCode = bookingDetails?.cart?.[0]?.room?.currency_code || "INR";
       
       // Create Razorpay order
       const orderResponse = await axios.post(
         `${API_BASE_URL}/api/booking/razorpay/create-order`,
         {
           amount: totalAmount,
-          currency: selectedRoom.currency_code || "INR",
+          currency: currencyCode,
           receipt: `receipt_${reservationNo}`,
           notes: {
             reservationNo,
@@ -880,7 +880,7 @@ const UnifiedBooking = () => {
                   paymentId: response.razorpay_payment_id,
                   bookingConfirmed: true,
                   bookingDetails: {
-                    room: selectedRoom,
+                    cart: bookingDetails?.cart || [],
                     searchData: searchData,
                     personalInfo: personalInfo,
                     totalAmount: totalAmount,
@@ -907,13 +907,33 @@ const UnifiedBooking = () => {
       };
 
       // Open Razorpay popup
+      console.log("Creating Razorpay instance with options:", {
+        key: options.key ? "***" : "missing",
+        amount: options.amount,
+        currency: options.currency,
+        order_id: options.order_id
+      });
+      
+      try {
       const razorpay = new window.Razorpay(options);
+        console.log("Razorpay instance created, opening popup...");
       razorpay.open();
+        console.log("Razorpay.open() called successfully");
+      } catch (razorpayError) {
+        console.error("Error creating Razorpay instance or opening popup:", razorpayError);
+        throw new Error(`Failed to open payment popup: ${razorpayError.message || 'Unknown error'}`);
+      }
 
     } catch (error) {
       console.error("Error opening Razorpay popup:", error);
+      console.error("Error stack:", error.stack);
       setProcessing(false);
-      alert("Failed to initialize payment. Please try again.");
+      Swal.fire({
+        icon: "error",
+        title: "Payment Error",
+        html: `<p>${error.message || "Failed to initialize payment."}</p><p class="text-sm mt-2">Please refresh the page and try again.</p>`,
+        confirmButtonColor: "#000000",
+      });
     }
   };
 
@@ -944,9 +964,21 @@ const UnifiedBooking = () => {
         ReservationNo
       );
 
-      // Calculate total amount (base + extras) to match eZee's calculation
-      // eZee calculates: base + extra guests, so our payment must match
-      const totalAmount = bookingDetails.totalPrice + (bookingDetails.extrasCharge || 0);
+      // Calculate total amount from cart
+      let totalAmount = 0;
+      if (bookingDetails?.cart) {
+        bookingDetails.cart.forEach(cartItem => {
+          if (cartItem.total) {
+            totalAmount += cartItem.total;
+          } else {
+            // Fallback calculation
+            totalAmount += (cartItem.rates?.roomBaseTotal || 0) + (cartItem.rates?.extrasTotal || 0);
+          }
+        });
+      } else {
+        // Legacy fallback
+        totalAmount = bookingDetails.totalPrice + (bookingDetails.extrasCharge || 0);
+      }
       
       console.log("[Payment Amount Calculation]:", {
         baseTotal: bookingDetails.totalPrice,
@@ -1007,7 +1039,28 @@ const UnifiedBooking = () => {
   };
 
   // Helper to calculate BASE rate only (for listing display - no extra guests)
-  // This calculates price for base occupancy only (2 adults, 0 children typically)
+  // Calculate base rate EXCLUDING GST (for main card display)
+  const calculateBaseRateExcludingGST = (room) => {
+    if (!room) return null;
+    
+    const baseExclusive = parseFloat(
+      Object.values(room.room_rates_info?.exclusive_tax || {})[0] || 
+      room.room_rates_info?.rack_rate || 
+      0
+    );
+    
+    if (baseExclusive === 0) return null;
+    
+    // Apply 20% discount
+    let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+    // Round discounted base to 2 decimals
+    discountedBase = Math.round(discountedBase * 100) / 100;
+    
+    // Return discounted base (excluding GST)
+    return discountedBase;
+  };
+
+  // This calculates price for base occupancy only (2 adults, 0 children typically) - INCLUDING GST
   const calculateBaseRateOnly = (room) => {
     if (!room) return null;
     
@@ -1040,7 +1093,244 @@ const UnifiedBooking = () => {
     return Math.round(finalPrice * 100) / 100; // Round to 2 decimals
   };
 
-  // Helper to calculate room rates for a specific room
+  // Calculate rates for expanded card with dynamic adult/child selection
+  // Returns: base rate (excl GST), extra adult rate (excl GST), extra child rate (excl GST), GST, total
+  const calculateExpandedCardRates = (room, adults, children) => {
+    if (!room || !searchData) return null;
+
+    const checkIn = new Date(searchData.checkIn);
+    const nights = calculateNights();
+    const baseAdults = parseInt(room.base_adult_occupancy || "0", 10);
+    const baseChildren = parseInt(room.base_child_occupancy || "0", 10);
+    const requestedAdults = parseInt(adults || baseAdults, 10);
+    const requestedChildren = parseInt(children || 0, 10);
+
+    // Calculate extra guests
+    const extraAdults = Math.max(0, requestedAdults - baseAdults);
+    const extraChildren = Math.max(0, requestedChildren - baseChildren);
+
+    let baseDiscountedTotal = 0; // Base rate excluding GST
+    let extraAdultDiscountedTotal = 0; // Extra adult rate excluding GST (for all extra adults)
+    let extraChildDiscountedTotal = 0; // Extra child rate excluding GST (for all extra children)
+    let gstTotal = 0; // Total GST
+
+    for (let i = 0; i < nights; i++) {
+      const date = new Date(checkIn);
+      date.setDate(checkIn.getDate() + i);
+      const dateString = formatDateForAPI(date);
+
+      // Base rate
+      const exclusiveRates = room.room_rates_info?.exclusive_tax || {};
+      const fallbackBaseExclusive = Object.values(exclusiveRates)[0] ?? room.room_rates_info?.rack_rate ?? 0;
+      let baseExclusive = exclusiveRates[dateString] !== undefined
+        ? parseFloat(exclusiveRates[dateString])
+        : parseFloat(fallbackBaseExclusive);
+      if (Number.isNaN(baseExclusive)) baseExclusive = 0;
+
+      let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+      discountedBase = Math.round(discountedBase * 100) / 100;
+      baseDiscountedTotal += discountedBase;
+
+      // Calculate GST on base
+      if (baseExclusive < GST_THRESHOLD) {
+        gstTotal += discountedBase * GST_RATE_LOW;
+      } else {
+        const sgst = Math.round(discountedBase * SGST_RATE * 100) / 100;
+        const cgst = Math.round(discountedBase * CGST_RATE * 100) / 100;
+        gstTotal += (sgst + cgst);
+      }
+
+      // Extra adult rate
+      if (extraAdults > 0) {
+        const extraAdultExclusiveRates = room.extra_adult_rates_info?.exclusive_tax || {};
+        const fallbackExtraAdultExclusive = Object.values(extraAdultExclusiveRates)[0] ?? room.extra_adult_rates_info?.rack_rate ?? 0;
+        let extraAdultExclusive = extraAdultExclusiveRates[dateString] !== undefined
+          ? parseFloat(extraAdultExclusiveRates[dateString])
+          : parseFloat(fallbackExtraAdultExclusive);
+        if (Number.isNaN(extraAdultExclusive)) extraAdultExclusive = 0;
+
+        let discountedExtraAdult = extraAdultExclusive * (1 - DISCOUNT_RATE);
+        discountedExtraAdult = Math.round(discountedExtraAdult * 100) / 100;
+        extraAdultDiscountedTotal += discountedExtraAdult * extraAdults;
+
+        // Calculate GST on extra adults
+        if (baseExclusive < GST_THRESHOLD) {
+          gstTotal += discountedExtraAdult * extraAdults * GST_RATE_LOW;
+        } else {
+          const sgst = Math.round(discountedExtraAdult * SGST_RATE * 100) / 100;
+          const cgst = Math.round(discountedExtraAdult * CGST_RATE * 100) / 100;
+          gstTotal += (sgst + cgst) * extraAdults;
+        }
+      }
+
+      // Extra child rate
+      if (extraChildren > 0) {
+        const extraChildExclusiveRates = room.extra_child_rates_info?.exclusive_tax || {};
+        const fallbackExtraChildExclusive = Object.values(extraChildExclusiveRates)[0] ?? room.extra_child_rates_info?.rack_rate ?? 0;
+        let extraChildExclusive = extraChildExclusiveRates[dateString] !== undefined
+          ? parseFloat(extraChildExclusiveRates[dateString])
+          : parseFloat(fallbackExtraChildExclusive);
+        if (Number.isNaN(extraChildExclusive)) extraChildExclusive = 0;
+
+        let discountedExtraChild = extraChildExclusive * (1 - DISCOUNT_RATE);
+        discountedExtraChild = Math.round(discountedExtraChild * 100) / 100;
+        extraChildDiscountedTotal += discountedExtraChild * extraChildren;
+
+        // Calculate GST on extra children
+        if (baseExclusive < GST_THRESHOLD) {
+          gstTotal += discountedExtraChild * extraChildren * GST_RATE_LOW;
+        } else {
+          const sgst = Math.round(discountedExtraChild * SGST_RATE * 100) / 100;
+          const cgst = Math.round(discountedExtraChild * CGST_RATE * 100) / 100;
+          gstTotal += (sgst + cgst) * extraChildren;
+        }
+      }
+    }
+
+    // Round totals
+    baseDiscountedTotal = Math.round(baseDiscountedTotal * 100) / 100;
+    extraAdultDiscountedTotal = Math.round(extraAdultDiscountedTotal * 100) / 100;
+    extraChildDiscountedTotal = Math.round(extraChildDiscountedTotal * 100) / 100;
+    gstTotal = Math.round(gstTotal * 100) / 100;
+    const total = baseDiscountedTotal + extraAdultDiscountedTotal + extraChildDiscountedTotal + gstTotal;
+
+    // Calculate per-person rates (excluding GST) for display
+    const extraAdultRatePerPerson = extraAdults > 0 ? extraAdultDiscountedTotal / extraAdults : 0;
+    const extraChildRatePerPerson = extraChildren > 0 ? extraChildDiscountedTotal / extraChildren : 0;
+
+    return {
+      baseRateExclGST: baseDiscountedTotal,
+      extraAdultRateExclGST: extraAdultRatePerPerson, // Per person
+      extraChildRateExclGST: extraChildRatePerPerson, // Per person
+      extraAdults,
+      extraChildren,
+      gst: gstTotal,
+      total: Math.round(total * 100) / 100,
+      nights
+    };
+  };
+
+  // Helper to calculate room rates for a cart item (with specific adults/children)
+  const calculateRoomRatesForCart = (room, adults, children) => {
+    if (!room || !searchData) return null;
+
+    const checkIn = new Date(searchData.checkIn);
+    const nights = calculateNights();
+
+    const baseAdults = parseInt(room.base_adult_occupancy || "0", 10);
+    const baseChildren = parseInt(room.base_child_occupancy || "0", 10);
+    const requestedAdults = parseInt(adults || 0, 10);
+    const requestedChildren = parseInt(children || 0, 10);
+
+    // Calculate extra guests beyond base occupancy
+    const extraAdults = Math.max(0, requestedAdults - baseAdults);
+    const extraChildren = Math.max(0, requestedChildren - baseChildren);
+
+    let baseTotal = 0;
+    let extrasTotal = 0;
+
+    for (let i = 0; i < nights; i++) {
+      const date = new Date(checkIn);
+      date.setDate(checkIn.getDate() + i);
+      const dateString = formatDateForAPI(date);
+
+      // Base rate (exclusive of tax)
+      const exclusiveRates = room.room_rates_info?.exclusive_tax || {};
+      const fallbackBaseExclusive =
+        Object.values(exclusiveRates)[0] ??
+        room.room_rates_info?.rack_rate ??
+        0;
+      let baseExclusive =
+        exclusiveRates[dateString] !== undefined
+          ? parseFloat(exclusiveRates[dateString])
+          : parseFloat(fallbackBaseExclusive);
+      if (Number.isNaN(baseExclusive)) baseExclusive = 0;
+
+      // Apply 20% discount
+      let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+      discountedBase = Math.round(discountedBase * 100) / 100;
+
+      // Conditional GST
+      let baseTotalNight;
+      if (baseExclusive < GST_THRESHOLD) {
+        baseTotalNight = discountedBase * (1 + GST_RATE_LOW);
+      } else {
+        const sgst = Math.round(discountedBase * SGST_RATE * 100) / 100;
+        const cgst = Math.round(discountedBase * CGST_RATE * 100) / 100;
+        baseTotalNight = discountedBase + sgst + cgst;
+      }
+      baseTotalNight = Math.round(baseTotalNight * 100) / 100;
+
+      // Extra adult rate
+      if (extraAdults > 0) {
+        const extraAdultExclusiveRates = room.extra_adult_rates_info?.exclusive_tax || {};
+        const fallbackExtraAdultExclusive =
+          Object.values(extraAdultExclusiveRates)[0] ??
+          room.extra_adult_rates_info?.rack_rate ??
+          0;
+        let extraAdultExclusive =
+          extraAdultExclusiveRates[dateString] !== undefined
+            ? parseFloat(extraAdultExclusiveRates[dateString])
+            : parseFloat(fallbackExtraAdultExclusive);
+        if (Number.isNaN(extraAdultExclusive)) extraAdultExclusive = 0;
+
+        let discountedExtraAdult = extraAdultExclusive * (1 - DISCOUNT_RATE);
+        discountedExtraAdult = Math.round(discountedExtraAdult * 100) / 100;
+        let extraAdultWithGst;
+        if (baseExclusive < GST_THRESHOLD) {
+          extraAdultWithGst = discountedExtraAdult * (1 + GST_RATE_LOW);
+        } else {
+          const sgst = Math.round(discountedExtraAdult * SGST_RATE * 100) / 100;
+          const cgst = Math.round(discountedExtraAdult * CGST_RATE * 100) / 100;
+          extraAdultWithGst = discountedExtraAdult + sgst + cgst;
+        }
+        extraAdultWithGst = Math.round(extraAdultWithGst * 100) / 100;
+        extrasTotal += extraAdults * extraAdultWithGst;
+      }
+
+      // Extra child rate
+      if (extraChildren > 0) {
+        const extraChildExclusiveRates = room.extra_child_rates_info?.exclusive_tax || {};
+        const fallbackExtraChildExclusive =
+          Object.values(extraChildExclusiveRates)[0] ??
+          room.extra_child_rates_info?.rack_rate ??
+          0;
+        let extraChildExclusive =
+          extraChildExclusiveRates[dateString] !== undefined
+            ? parseFloat(extraChildExclusiveRates[dateString])
+            : parseFloat(fallbackExtraChildExclusive);
+        if (Number.isNaN(extraChildExclusive)) extraChildExclusive = 0;
+
+        let discountedExtraChild = extraChildExclusive * (1 - DISCOUNT_RATE);
+        discountedExtraChild = Math.round(discountedExtraChild * 100) / 100;
+        let extraChildWithGst;
+        if (baseExclusive < GST_THRESHOLD) {
+          extraChildWithGst = discountedExtraChild * (1 + GST_RATE_LOW);
+        } else {
+          const sgst = Math.round(discountedExtraChild * SGST_RATE * 100) / 100;
+          const cgst = Math.round(discountedExtraChild * CGST_RATE * 100) / 100;
+          extraChildWithGst = discountedExtraChild + sgst + cgst;
+        }
+        extraChildWithGst = Math.round(extraChildWithGst * 100) / 100;
+        extrasTotal += extraChildren * extraChildWithGst;
+      }
+
+      baseTotal += baseTotalNight;
+    }
+
+    const total = baseTotal + extrasTotal;
+
+    return {
+      roomBaseTotal: baseTotal,
+      extrasTotal,
+      total,
+      nights,
+      extraAdults,
+      extraChildren,
+    };
+  };
+
+  // Helper to calculate room rates for a specific room (legacy - for display)
   // IMPORTANT: Applies 20% discount + conditional GST (5% if base < 7500, else 18%)
   // This includes extra guests if selected
   const calculateRoomRates = (room) => {
@@ -1379,12 +1669,28 @@ const UnifiedBooking = () => {
   };
 
   // Handle expandable cards with scroll
-  const toggleRatesCard = (roomId, elementId) => {
+  const toggleRatesCard = (roomId, elementId, room) => {
     if (expandedRates === roomId) {
       setExpandedRates(null);
     } else {
       setExpandedRates(roomId);
       setExpandedDetails(null); // Close details if open
+      
+      // Initialize adult/child selection for this room if not already set
+      if (room && !expandedRoomSelections[roomId]) {
+        const baseAdults = parseInt(room.base_adult_occupancy || "2", 10);
+        const maxAdults = parseInt(room.max_adult_occupancy || "2", 10);
+        const defaultAdults = Math.max(baseAdults, Math.min(maxAdults, parseInt(searchData?.adults || baseAdults, 10)));
+        
+        setExpandedRoomSelections(prev => ({
+          ...prev,
+          [roomId]: {
+            adults: defaultAdults,
+            children: 0
+          }
+        }));
+      }
+      
       setTimeout(() => {
         const element = document.getElementById(elementId);
         element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -1430,10 +1736,15 @@ const UnifiedBooking = () => {
         }
       }
 
-      // Step 2 -> Step 3: Need room selected
+      // Step 2 -> Step 3: Need rooms in cart
       if (currentStep === 2 && targetStep === 3) {
-        if (!selectedRoom) {
-          alert("Please select a room first");
+        if (!selectedRoomsCart || selectedRoomsCart.length === 0) {
+          alert("Please add rooms to cart first");
+          return;
+        }
+        const requestedRooms = parseInt(searchData?.rooms || 1);
+        if (selectedRoomsCart.length !== requestedRooms) {
+          alert(`Please select ${requestedRooms} room(s) before proceeding`);
           return;
         }
       }
@@ -1455,10 +1766,10 @@ const UnifiedBooking = () => {
 
   // Fetch payment gateways when step 4 is reached
   useEffect(() => {
-    if (currentStep === 4 && selectedRoom && bookingDetails && personalInfo) {
+    if (currentStep === 4 && bookingDetails && bookingDetails.cart && personalInfo) {
       fetchPaymentGateways();
     }
-  }, [currentStep, selectedRoom, bookingDetails, personalInfo]);
+  }, [currentStep, bookingDetails, personalInfo]);
 
   const fetchPaymentGateways = async () => {
     try {
@@ -1968,9 +2279,38 @@ const UnifiedBooking = () => {
                     </div>
                   </div>
 
-                  {/* Guest Selection Dropdowns */}
+                  {/* Rooms Selection First */}
                   <div className="space-y-2.5 mb-4">
                     <div className="relative">
+                      <label className="block text-xs text-gray-600 mb-1.5">Number of Rooms *</label>
+                      <select
+                        value={rooms}
+                        onChange={(e) => {
+                          const newRooms = parseInt(e.target.value);
+                          setRooms(newRooms);
+                          // Auto-set adults based on rooms (2 adults per room)
+                          setAdults(newRooms * 2);
+                          // Reset children to 0
+                          setChildren(0);
+                        }}
+                        className="w-full bg-white border-2 border-gray-200 text-gray-900 rounded-lg px-3 py-2.5 text-sm font-medium appearance-none cursor-pointer hover:border-gray-400 focus:outline-none focus:border-black pr-8"
+                      >
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <option key={num} value={num}>
+                            {num} {num === 1 ? "Room" : "Rooms"}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none top-7">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Adults Selection - Dynamic based on rooms */}
+                    <div className="relative">
+                      <label className="block text-xs text-gray-600 mb-1.5">Adults (12+ yrs) *</label>
                       <select
                         value={adults}
                         onChange={(e) => setAdults(e.target.value)}
@@ -1978,8 +2318,8 @@ const UnifiedBooking = () => {
                       >
                         {(() => {
                           const options = [];
-                          // Allow 1-12 adults (reasonable max for 4 rooms: 4 rooms × 3 adults = 12)
-                          for (let i = 1; i <= 12; i++) {
+                          const maxAdults = getMaxAdultsForRooms(rooms);
+                          for (let i = 1; i <= maxAdults; i++) {
                             options.push(
                               <option key={i} value={i}>
                                 {i} {i === 1 ? "Adult" : "Adults"}
@@ -1989,13 +2329,16 @@ const UnifiedBooking = () => {
                           return options;
                         })()}
                       </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none top-7">
                         <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
                     </div>
+
+                    {/* Children Selection - Dynamic based on rooms */}
                     <div className="relative">
+                      <label className="block text-xs text-gray-600 mb-1.5">Children (0-12 yrs)</label>
                       <select
                         value={children}
                         onChange={(e) => setChildren(e.target.value)}
@@ -2003,8 +2346,8 @@ const UnifiedBooking = () => {
                       >
                         {(() => {
                           const options = [];
-                          // Allow 0-8 children (reasonable max for 4 rooms: 4 rooms × 2 children = 8)
-                          for (let i = 0; i <= 8; i++) {
+                          const maxChildren = rooms; // Max children equals number of rooms
+                          for (let i = 0; i <= maxChildren; i++) {
                             options.push(
                               <option key={i} value={i}>
                                 {i} {i === 1 ? "Child" : "Children"}
@@ -2014,14 +2357,11 @@ const UnifiedBooking = () => {
                           return options;
                         })()}
                       </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none top-7">
                         <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
-                    </div>
-                    <div className="text-xs text-gray-600 text-center mt-2">
-                      Number of rooms will be calculated automatically based on your selection
                     </div>
                   </div>
 
@@ -2108,6 +2448,113 @@ const UnifiedBooking = () => {
                 Modify Search
               </button>
             </div>
+
+            {/* Selected Rooms Cart - Below Your Selection */}
+            {selectedRoomsCart.length > 0 && (
+              <div id="selected-rooms-cart" className="bg-white rounded-lg shadow-lg p-4 sm:p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg sm:text-xl font-serif font-bold">
+                    Selected Rooms ({selectedRoomsCart.length}/{searchData?.rooms || 0})
+                  </h3>
+                  {selectedRoomsCart.length < parseInt(searchData?.rooms || 1) && (
+                    <p className="text-xs text-gray-500 italic">
+                      Edit via room cards below
+                    </p>
+                  )}
+                </div>
+                <div className={`grid gap-4 ${
+                  selectedRoomsCart.length === 1 
+                    ? 'grid-cols-1' 
+                    : selectedRoomsCart.length === 2 
+                    ? 'grid-cols-1 md:grid-cols-2' 
+                    : selectedRoomsCart.length === 3
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                    : selectedRoomsCart.length === 4
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                }`}>
+                  {selectedRoomsCart.map((cartItem, index) => {
+                    const room = cartItem.room;
+                    const rates = calculateRoomRatesForCart(room, cartItem.adults, cartItem.children);
+                    
+                    return (
+                      <div key={cartItem.id} className="border-2 border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors bg-gradient-to-br from-gray-50 to-white">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-base text-gray-900">{room.Room_Name}</h4>
+                            <p className="text-xs text-gray-500 mt-1">Room {index + 1}</p>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveRoomFromCart(cartItem.id)}
+                            className="text-red-600 hover:text-red-800 transition-colors p-1"
+                            title="Remove room"
+                          >
+                            <FiX className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        {/* Read-only occupancy display */}
+                        <div className="space-y-2 mb-3">
+                          <div className="flex items-center justify-between py-2 px-3 bg-white rounded border border-gray-200">
+                            <span className="text-xs text-gray-600">Adults</span>
+                            <span className="text-sm font-semibold text-gray-900">{cartItem.adults}</span>
+                          </div>
+                          <div className="flex items-center justify-between py-2 px-3 bg-white rounded border border-gray-200">
+                            <span className="text-xs text-gray-600">Children</span>
+                            <span className="text-sm font-semibold text-gray-900">{cartItem.children || 0}</span>
+                          </div>
+                        </div>
+
+                        {/* Room price */}
+                        {rates && (
+                          <div className="mt-3 pt-3 border-t-2 border-gray-300">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Room Price</span>
+                              <span className="text-base font-bold text-gray-900">
+                                {room.currency_sign}{rates.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Total and Proceed Button */}
+                <div className="mt-6 pt-4 border-t border-gray-300">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    {(() => {
+                      let grandTotal = 0;
+                      selectedRoomsCart.forEach(item => {
+                        const rates = calculateRoomRatesForCart(item.room, item.adults, item.children);
+                        if (rates) grandTotal += rates.total;
+                      });
+                      return (
+                        <>
+                          <div className="flex justify-between items-center w-full sm:w-auto">
+                            <span className="font-bold text-lg">Total:</span>
+                            <span className="font-bold text-xl ml-4">
+                              {selectedRoomsCart[0]?.room?.currency_sign || "₹"}
+                              {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <button
+                            onClick={handleProceedToCheckout}
+                            disabled={selectedRoomsCart.length !== parseInt(searchData?.rooms || 1)}
+                            className="w-full sm:w-auto px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                          >
+                            {selectedRoomsCart.length === parseInt(searchData?.rooms || 1)
+                              ? "Proceed to Checkout"
+                              : `Select ${parseInt(searchData?.rooms || 1) - selectedRoomsCart.length} more room(s)`}
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Rooms List */}
             {availableRooms.length === 0 ? (
@@ -2202,22 +2649,22 @@ const UnifiedBooking = () => {
                                   <p className="text-2xl sm:text-3xl font-serif text-black">
                                     {room.currency_sign}
                                     {(() => {
-                                      // Calculate base rate only (no extra guests) for listing display
-                                      const basePrice = calculateBaseRateOnly(room);
-                                      return basePrice 
-                                        ? basePrice.toLocaleString()
-                                        : (room.room_rates_info?.avg_per_night_after_discount || 0).toLocaleString();
+                                      // Calculate base rate excluding GST for listing display
+                                      const basePriceExclGST = calculateBaseRateExcludingGST(room);
+                                      return basePriceExclGST 
+                                        ? basePriceExclGST.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                        : (room.room_rates_info?.avg_per_night_without_tax || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                     })()}
                                     <span className="text-sm text-gray-600 font-normal"> / night</span>
                                   </p>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Including GST (base rate for {room.base_adult_occupancy || 2} adults{room.base_child_occupancy > 0 ? `, ${room.base_child_occupancy} child${room.base_child_occupancy > 1 ? 'ren' : ''}` : ''})
+                                    Excluding GST (base rate for {room.base_adult_occupancy || 2} adults{room.base_child_occupancy > 0 ? `, ${room.base_child_occupancy} child${room.base_child_occupancy > 1 ? 'ren' : ''}` : ''})
                                   </p>
                                 </div>
 
                                 {/* View Rates Button */}
                                 <button
-                                  onClick={() => toggleRatesCard(room.roomrateunkid, `rates-${room.roomrateunkid}`)}
+                                  onClick={() => toggleRatesCard(room.roomrateunkid, `rates-${room.roomrateunkid}`, room)}
                                   className="w-full sm:w-[250px] px-6 py-3 bg-black hover:bg-gray-800 text-white text-sm uppercase tracking-wider transition-all duration-300 font-medium rounded-full text-center"
                                 >
                                   {isRatesExpanded ? "Hide rates" : "View Rates & Offers"}
@@ -2285,56 +2732,137 @@ const UnifiedBooking = () => {
 
                                 {/* Price Breakdown & actions */}
                                 <div className="w-full lg:max-w-md flex flex-col gap-4">
-                                  {/* Detailed Breakdown */}
-                                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                                    <h5 className="font-semibold text-sm mb-3">Price Breakdown ({roomRates?.nights || calculateNights()} {roomRates?.nights === 1 ? 'Night' : 'Nights'})</h5>
+                                  {/* Detailed Breakdown with Adult/Child Selection */}
+                                  {(() => {
+                                    const selection = expandedRoomSelections[room.roomrateunkid] || {
+                                      adults: parseInt(room.base_adult_occupancy || "2", 10),
+                                      children: 0
+                                    };
+                                    const maxAdults = parseInt(room.max_adult_occupancy || "2", 10);
+                                    const maxChildren = parseInt(room.max_child_occupancy || "1", 10);
+                                    const maxOccupancy = room.max_occupancy || "3";
+                                    const baseAdults = parseInt(room.base_adult_occupancy || "2", 10);
                                     
-                                    {/* Base Rate */}
+                                    // Calculate rates based on current selection
+                                    const rates = calculateExpandedCardRates(room, selection.adults, selection.children);
+                                    const isValid = validateRoomOccupancy(room, selection.adults, selection.children);
+                                    
+                                    return (
+                                      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                                        <h5 className="font-semibold text-sm mb-3">Price Breakdown ({calculateNights()} {calculateNights() === 1 ? 'Night' : 'Nights'})</h5>
+                                        
+                                        {/* Base Rate (Excluding GST) */}
                                     <div className="flex justify-between text-sm">
-                                      <span className="text-gray-600">Base Rate ({room.base_adult_occupancy || 2} Adults)</span>
+                                          <span className="text-gray-600">Base Rate ({baseAdults} Adults) - Excluding GST</span>
                                       <span className="font-semibold">
-                                        {room.currency_sign}{breakdown?.baseDiscounted?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                                            {room.currency_sign}{rates?.baseRateExclGST?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                                       </span>
                                     </div>
 
-                                    {/* GST */}
-                                    {breakdown?.gst > 0 && (
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">GST</span>
-                                        <span className="font-semibold">
-                                          {room.currency_sign}{breakdown.gst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {/* Adults Selection */}
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <label className="text-sm text-gray-700 font-medium">Adults (Max: {maxAdults})</label>
+                                            <span className="text-xs text-gray-500">
+                                              {selection.adults > baseAdults && rates?.extraAdultRateExclGST > 0 && (
+                                                `+${room.currency_sign}${(rates.extraAdultRateExclGST * (selection.adults - baseAdults)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                              )}
                                         </span>
                                       </div>
-                                    )}
+                                          <select
+                                            value={selection.adults}
+                                            onChange={(e) => {
+                                              const newAdults = parseInt(e.target.value);
+                                              if (validateRoomOccupancy(room, newAdults, selection.children)) {
+                                                setExpandedRoomSelections(prev => ({
+                                                  ...prev,
+                                                  [room.roomrateunkid]: {
+                                                    ...prev[room.roomrateunkid],
+                                                    adults: newAdults
+                                                  }
+                                                }));
+                                              } else {
+                                                Swal.fire({
+                                                  icon: "error",
+                                                  title: "Max Occupancy Exceeded",
+                                                  text: `This room can accommodate maximum ${maxOccupancy} guests.`,
+                                                  confirmButtonColor: "#000000",
+                                                });
+                                              }
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                          >
+                                            {Array.from({ length: maxAdults }, (_, i) => i + 1).map((num) => (
+                                              <option key={num} value={num}>{num}</option>
+                                            ))}
+                                          </select>
+                                        </div>
 
-                                    {/* Extra Adults */}
-                                    {roomRates?.extraAdults > 0 && breakdown?.extraAdults > 0 && (
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Extra Adults ({roomRates.extraAdults})</span>
-                                        <span className="font-semibold">
-                                          {room.currency_sign}{breakdown.extraAdults.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {/* Children Selection */}
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <label className="text-sm text-gray-700 font-medium">Children (Max: {maxChildren})</label>
+                                            <span className="text-xs text-gray-500">
+                                              {selection.children > 0 && rates?.extraChildRateExclGST > 0 && (
+                                                `+${room.currency_sign}${(rates.extraChildRateExclGST * selection.children).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                              )}
                                         </span>
                                       </div>
-                                    )}
+                                          <select
+                                            value={selection.children}
+                                            onChange={(e) => {
+                                              const newChildren = parseInt(e.target.value);
+                                              if (validateRoomOccupancy(room, selection.adults, newChildren)) {
+                                                setExpandedRoomSelections(prev => ({
+                                                  ...prev,
+                                                  [room.roomrateunkid]: {
+                                                    ...prev[room.roomrateunkid],
+                                                    children: newChildren
+                                                  }
+                                                }));
+                                              } else {
+                                                Swal.fire({
+                                                  icon: "error",
+                                                  title: "Max Occupancy Exceeded",
+                                                  text: `This room can accommodate maximum ${maxOccupancy} guests.`,
+                                                  confirmButtonColor: "#000000",
+                                                });
+                                              }
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                          >
+                                            {Array.from({ length: maxChildren + 1 }, (_, i) => i).map((num) => (
+                                              <option key={num} value={num}>{num}</option>
+                                            ))}
+                                          </select>
+                                        </div>
 
-                                    {/* Extra Children */}
-                                    {roomRates?.extraChildren > 0 && breakdown?.extraChildren > 0 && (
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Extra Children ({roomRates.extraChildren})</span>
+                                        {!isValid && (
+                                          <p className="text-xs text-red-600">
+                                            Max occupancy: {maxOccupancy} guests
+                                          </p>
+                                        )}
+
+                                        {/* GST Total */}
+                                        {rates?.gst > 0 && (
+                                          <div className="flex justify-between text-sm pt-2 border-t border-gray-300">
+                                            <span className="text-gray-600">GST</span>
                                         <span className="font-semibold">
-                                          {room.currency_sign}{breakdown.extraChildren.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              {room.currency_sign}{rates.gst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                       </div>
                                     )}
 
                                     {/* Total */}
-                                    <div className="flex justify-between items-center pt-3 border-t border-gray-300">
+                                        <div className="flex justify-between items-center pt-3 border-t-2 border-gray-400">
                                       <span className="font-bold text-base">Total</span>
                                       <span className="font-bold text-lg">
-                                        {room.currency_sign}{roomRates?.total?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                                            {room.currency_sign}{rates?.total?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                                       </span>
                                     </div>
                                   </div>
+                                    );
+                                  })()}
 
                                   {/* Actions */}
                                   <div className="flex flex-col gap-3">
@@ -2345,12 +2873,78 @@ const UnifiedBooking = () => {
                                       Booking policies
                                     </button>
 
+                                    <div className="flex items-center gap-3">
+                                      {/* Available Rooms Count */}
+                                      {(() => {
+                                        const minAvailableRooms = parseInt(room.min_ava_rooms || "0", 10);
+                                        const roomsInCartOfSameType = selectedRoomsCart.filter(
+                                          r => r.room.roomrateunkid === room.roomrateunkid
+                                        ).length;
+                                        const remainingRooms = minAvailableRooms - roomsInCartOfSameType;
+                                        
+                                        if (minAvailableRooms > 0) {
+                                          return (
+                                            <div className="flex-1 text-sm text-gray-600">
+                                              {remainingRooms > 0 ? (
+                                                <span>
+                                                  {remainingRooms} {remainingRooms === 1 ? 'room' : 'rooms'} left
+                                                </span>
+                                              ) : (
+                                                <span className="text-red-600 font-medium">No rooms available</span>
+                                              )}
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+
                                     <button
-                                      onClick={() => handleSelectRoom(room)}
-                                      className="w-full rounded-full px-4 py-2 bg-black hover:bg-gray-800 text-white text-sm tracking-wider transition-all duration-300 text-center"
-                                    >
-                                      Reserve
+                                        onClick={() => {
+                                          // Ensure we have valid selections before adding
+                                          const selection = expandedRoomSelections[room.roomrateunkid];
+                                          if (!selection) {
+                                            // Initialize if not set
+                                            const baseAdults = parseInt(room.base_adult_occupancy || "2", 10);
+                                            setExpandedRoomSelections(prev => ({
+                                              ...prev,
+                                              [room.roomrateunkid]: {
+                                                adults: baseAdults,
+                                                children: 0
+                                              }
+                                            }));
+                                            // Wait a moment then add
+                                            setTimeout(() => handleAddRoomToCart(room), 100);
+                                          } else {
+                                            handleAddRoomToCart(room);
+                                          }
+                                        }}
+                                        disabled={
+                                          selectedRoomsCart.length >= parseInt(searchData?.rooms || 1) ||
+                                          (() => {
+                                            const minAvailableRooms = parseInt(room.min_ava_rooms || "0", 10);
+                                            const roomsInCartOfSameType = selectedRoomsCart.filter(
+                                              r => r.room.roomrateunkid === room.roomrateunkid
+                                            ).length;
+                                            return roomsInCartOfSameType >= minAvailableRooms;
+                                          })()
+                                        }
+                                        className="flex-1 rounded-full px-4 py-2 bg-black hover:bg-gray-800 text-white text-sm tracking-wider transition-all duration-300 text-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                      >
+                                        {(() => {
+                                          if (selectedRoomsCart.length >= parseInt(searchData?.rooms || 1)) {
+                                            return "Cart Full";
+                                          }
+                                          const minAvailableRooms = parseInt(room.min_ava_rooms || "0", 10);
+                                          const roomsInCartOfSameType = selectedRoomsCart.filter(
+                                            r => r.room.roomrateunkid === room.roomrateunkid
+                                          ).length;
+                                          if (roomsInCartOfSameType >= minAvailableRooms) {
+                                            return "Not Available";
+                                          }
+                                          return "Add Room";
+                                        })()}
                                     </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -2521,7 +3115,7 @@ const UnifiedBooking = () => {
         )}
 
         {/* Step 3: Personal Info */}
-        {currentStep === 3 && selectedRoom && bookingDetails && (
+        {currentStep === 3 && bookingDetails && bookingDetails.cart && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2849,23 +3443,37 @@ const UnifiedBooking = () => {
               <div className="lg:col-span-1">
                 <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
                   <h3 className="text-xl font-serif font-bold mb-4">
-                    Room Summary
+                    Booking Summary
                   </h3>
 
-                  {selectedRoom.room_main_image && (
-                    <img
-                      src={selectedRoom.room_main_image}
-                      alt={selectedRoom.Room_Name}
-                      className="w-full h-48 object-cover rounded-lg mb-4"
-                    />
-                  )}
-
-                  <h4 className="font-semibold text-lg mb-2">
-                    {selectedRoom.Room_Name}
+                  {/* Selected Rooms */}
+                  <div className="space-y-3 mb-4">
+                    {bookingDetails.cart.map((cartItem, index) => {
+                      const room = cartItem.room;
+                      return (
+                        <div key={cartItem.id} className="border border-gray-200 rounded-lg p-3">
+                          {room.room_main_image && (
+                            <img
+                              src={room.room_main_image}
+                              alt={room.Room_Name}
+                              className="w-full h-32 object-cover rounded-lg mb-2"
+                            />
+                          )}
+                          <h4 className="font-semibold text-sm mb-1">
+                            Room {index + 1}: {room.Room_Name}
                   </h4>
-                  <p className="text-gray-600 text-sm mb-4">
-                    {selectedRoom.Roomtype_Name}
-                  </p>
+                          <p className="text-xs text-gray-600 mb-2">
+                            {cartItem.adults} Adults, {cartItem.children || 0} Children
+                          </p>
+                          {cartItem.total && (
+                            <p className="text-sm font-semibold">
+                              {room.currency_sign}{cartItem.total.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
 
                   <div className="space-y-3 py-4 border-t border-b">
                     <div className="flex justify-between text-sm">
@@ -2887,64 +3495,25 @@ const UnifiedBooking = () => {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Guests</span>
+                      <span className="text-gray-600">Total Rooms</span>
                       <span className="font-semibold">
-                        {searchData.adults} Adults, {searchData.children || 0}{" "}
-                        Children
+                        {bookingDetails.cart.length}
                       </span>
                     </div>
-                  </div>
-
-                  {/* Price Breakdown */}
-                  <div className="pt-4 space-y-2">
-                    {bookingDetails.breakdown && (
-                      <>
-                        <div className="flex justify-between text-xs sm:text-sm">
-                          <span className="text-gray-600">Base Rate ({selectedRoom.base_adult_occupancy || 2} Adults)</span>
-                          <span className="font-semibold">
-                            {selectedRoom.currency_sign}
-                            {bookingDetails.breakdown.baseDiscounted?.toFixed(2) || '0.00'}
-                          </span>
-                        </div>
-                        {bookingDetails.breakdown.gst > 0 && (
-                          <div className="flex justify-between text-xs sm:text-sm">
-                            <span className="text-gray-600">GST</span>
-                            <span className="font-semibold">
-                              {selectedRoom.currency_sign}
-                              {bookingDetails.breakdown.gst.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {bookingDetails.roomRates?.extraAdults > 0 && bookingDetails.breakdown.extraAdults > 0 && (
-                          <div className="flex justify-between text-xs sm:text-sm">
-                            <span className="text-gray-600">Extra Adults ({bookingDetails.roomRates.extraAdults})</span>
-                            <span className="font-semibold">
-                              {selectedRoom.currency_sign}
-                              {bookingDetails.breakdown.extraAdults.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {bookingDetails.roomRates?.extraChildren > 0 && bookingDetails.breakdown.extraChildren > 0 && (
-                          <div className="flex justify-between text-xs sm:text-sm">
-                            <span className="text-gray-600">Extra Children ({bookingDetails.roomRates.extraChildren})</span>
-                            <span className="font-semibold">
-                              {selectedRoom.currency_sign}
-                              {bookingDetails.breakdown.extraChildren.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
                   </div>
 
                   <div className="pt-4 border-t">
                     <div className="flex justify-between items-center text-lg font-bold">
                       <span>Total</span>
                       <span className="text-black">
-                        {selectedRoom.currency_sign}
-                        {bookingDetails.roomRates?.total 
-                          ? bookingDetails.roomRates.total.toFixed(2)
-                          : (bookingDetails.totalPrice + (bookingDetails.extrasCharge || 0)).toFixed(2)}
+                        {bookingDetails.cart[0]?.room?.currency_sign || "₹"}
+                        {(() => {
+                          let total = 0;
+                          bookingDetails.cart.forEach(item => {
+                            total += item.total || 0;
+                          });
+                          return total.toFixed(2);
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -2955,7 +3524,7 @@ const UnifiedBooking = () => {
         )}
 
         {/* Step 4: Payment */}
-        {currentStep === 4 && selectedRoom && bookingDetails && personalInfo && (
+        {currentStep === 4 && bookingDetails && bookingDetails.cart && personalInfo && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -3064,38 +3633,31 @@ const UnifiedBooking = () => {
                     Final Summary
                   </h3>
 
-                  {/* Room Details */}
-                  <div className="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b">
-                    {/* Image */}
-                    <div className="relative h-48 sm:h-56 md:h-64 lg:h-auto lg:min-h-full overflow-hidden">
-                          {selectedRoom.room_main_image ? (
+                  {/* Selected Rooms */}
+                  <div className="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b space-y-3">
+                    {bookingDetails.cart.map((cartItem, index) => {
+                      const room = cartItem.room;
+                      return (
+                        <div key={cartItem.id} className="border border-gray-200 rounded-lg p-3">
+                          {room.room_main_image && (
                             <img
-                              src={selectedRoom.room_main_image}
-                              alt={selectedRoom.Room_Name || "Room"}
-                              className="w-full h-full object-cover"
+                              src={room.room_main_image}
+                              alt={room.Room_Name || "Room"}
+                              className="w-full h-32 object-cover rounded-lg mb-2"
                             />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                              <svg
-                                className="w-16 h-16 text-gray-700"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                                />
-                              </svg>
-                            </div>
+                          )}
+                          <h4 className="font-semibold text-sm">Room {index + 1}: {room.Room_Name}</h4>
+                          <p className="text-xs text-gray-600">
+                            {cartItem.adults} Adults, {cartItem.children || 0} Children
+                          </p>
+                          {cartItem.total && (
+                            <p className="text-sm font-semibold mt-1">
+                              {room.currency_sign}{cartItem.total.toFixed(2)}
+                            </p>
                           )}
                         </div>
-                    <h4 className="font-semibold text-sm sm:text-base">{selectedRoom.Room_Name}</h4>
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      {bookingDetails.nights} nights
-                    </p>
+                      );
+                    })}
                   </div>
 
                   {/* Guest Info */}
@@ -3107,66 +3669,19 @@ const UnifiedBooking = () => {
                     </p>
                   </div>
 
-                  {/* Price Breakdown */}
-                  <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
-                    {bookingDetails.breakdown && (
-                      <>
-                        <div className="flex justify-between text-xs sm:text-sm">
-                          <span className="text-gray-600">Base Rate ({selectedRoom.base_adult_occupancy || 2} Adults)</span>
-                          <span className="font-semibold">
-                            {selectedRoom.currency_sign}
-                            {bookingDetails.breakdown.baseDiscounted?.toFixed(2) || '0.00'}
-                          </span>
-                        </div>
-                        {bookingDetails.breakdown.gst > 0 && (
-                          <div className="flex justify-between text-xs sm:text-sm">
-                            <span className="text-gray-600">GST</span>
-                            <span className="font-semibold">
-                              {selectedRoom.currency_sign}
-                              {bookingDetails.breakdown.gst.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {bookingDetails.roomRates?.extraAdults > 0 && bookingDetails.breakdown.extraAdults > 0 && (
-                          <div className="flex justify-between text-xs sm:text-sm">
-                            <span className="text-gray-600">Extra Adults ({bookingDetails.roomRates.extraAdults})</span>
-                            <span className="font-semibold">
-                              {selectedRoom.currency_sign}
-                              {bookingDetails.breakdown.extraAdults.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {bookingDetails.roomRates?.extraChildren > 0 && bookingDetails.breakdown.extraChildren > 0 && (
-                          <div className="flex justify-between text-xs sm:text-sm">
-                            <span className="text-gray-600">Extra Children ({bookingDetails.roomRates.extraChildren})</span>
-                            <span className="font-semibold">
-                              {selectedRoom.currency_sign}
-                              {bookingDetails.breakdown.extraChildren.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    {!bookingDetails.breakdown && (
-                      <div className="flex justify-between text-xs sm:text-sm">
-                        <span className="text-gray-600">Room Rate</span>
-                        <span className="font-semibold">
-                          {selectedRoom.currency_sign}
-                          {bookingDetails.totalPrice.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Total */}
                   <div className="pt-3 sm:pt-4 border-t">
                     <div className="flex justify-between items-center text-base sm:text-lg font-bold">
                       <span>Total to Pay</span>
                       <span className="text-black">
-                        {selectedRoom.currency_sign}
-                        {bookingDetails.roomRates?.total 
-                          ? bookingDetails.roomRates.total.toFixed(2)
-                          : (bookingDetails.totalPrice + (bookingDetails.extrasCharge || 0)).toFixed(2)}
+                        {bookingDetails.cart[0]?.room?.currency_sign || "₹"}
+                        {(() => {
+                          let total = 0;
+                          bookingDetails.cart.forEach(item => {
+                            total += item.total || 0;
+                          });
+                          return total.toFixed(2);
+                        })()}
                       </span>
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-500 mt-2">
@@ -3178,8 +3693,8 @@ const UnifiedBooking = () => {
                   <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t">
                     <p className="text-[10px] sm:text-xs text-gray-600">
                       <strong>Note:</strong> Check-in time is after{" "}
-                      {selectedRoom.check_in_time || "2:00 PM"} and check-out time is before{" "}
-                      {selectedRoom.check_out_time || "12:00 PM"}.
+                      {bookingDetails.cart[0]?.room?.check_in_time || "2:00 PM"} and check-out time is before{" "}
+                      {bookingDetails.cart[0]?.room?.check_out_time || "12:00 PM"}.
                     </p>
                   </div>
                 </div>

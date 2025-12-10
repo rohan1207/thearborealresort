@@ -29,20 +29,42 @@ const BookingConfirmation = () => {
     return null;
   }
 
+  // Normalize data to support both new (multi-room) and old (single-room) flows
   const {
-    room,
-    searchData,
-    personalInfo,
+    cart = [],
+    room, // legacy single-room flow
+    searchData = {},
+    personalInfo = {},
     totalAmount,
     email,
     phone,
   } = bookingDetails;
+
+  // If cart is empty but a single room exists (old flow), adapt it
+  const normalizedCart =
+    cart && cart.length > 0
+      ? cart
+      : room
+      ? [
+          {
+            id: "single-room",
+            room,
+            adults: searchData.adults || bookingDetails.adults || 1,
+            children: searchData.children || bookingDetails.children || 0,
+            total:
+              typeof totalAmount === "number"
+                ? totalAmount
+                : bookingDetails.totalPrice || 0,
+          },
+        ]
+      : [];
 
   const guestName = personalInfo
     ? `${personalInfo.firstName || ""} ${personalInfo.lastName || ""}`.trim()
     : "";
 
   const formatDate = (dateString) => {
+    if (!dateString) return "—";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       weekday: "short",
@@ -53,11 +75,29 @@ const BookingConfirmation = () => {
   };
 
   const calculateNights = () => {
+    if (!searchData.checkIn || !searchData.checkOut) return 1;
     const checkIn = new Date(searchData.checkIn);
     const checkOut = new Date(searchData.checkOut);
     const diffTime = Math.abs(checkOut - checkIn);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
+
+  const totalGuests = normalizedCart.reduce(
+    (acc, item) => {
+      acc.adults += Number(item.adults || 0);
+      acc.children += Number(item.children || 0);
+      return acc;
+    },
+    { adults: 0, children: 0 }
+  );
+
+  const computedTotal =
+    typeof totalAmount === "number"
+      ? totalAmount
+      : normalizedCart.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+
+  // Get currency sign from first room, default to ₹
+  const currencySign = normalizedCart[0]?.room?.currency_sign || "₹";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-white pt-28 pb-8 px-3 sm:px-4 lg:px-6">
@@ -127,23 +167,23 @@ const BookingConfirmation = () => {
                   </div>
                 </div>
 
-                {/* Room Type */}
+                {/* Total Rooms & Guests */}
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FiHome className="w-5 h-5 text-gray-700" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">
-                      Room Type
+                      Rooms & Guests
                     </p>
                     <p className="text-sm sm:text-base text-gray-900 font-semibold">
-                      {room.Room_Name || room.Roomtype_Name}
+                      {normalizedCart.length} Room{normalizedCart.length > 1 ? "s" : ""}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {searchData.adults} Adult{searchData.adults > 1 ? "s" : ""}
-                      {searchData.children > 0 &&
-                        `, ${searchData.children} Child${
-                          searchData.children > 1 ? "ren" : ""
+                      {totalGuests.adults} Adult{totalGuests.adults > 1 ? "s" : ""}
+                      {totalGuests.children > 0 &&
+                        `, ${totalGuests.children} Child${
+                          totalGuests.children > 1 ? "ren" : ""
                         }`}
                     </p>
                   </div>
@@ -239,11 +279,15 @@ const BookingConfirmation = () => {
                   </div>
                 )}
 
-                {typeof totalAmount === "number" && (
+                {(typeof totalAmount === "number" || computedTotal > 0) && (
                   <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg mt-3">
                     <span className="text-white font-medium">Total Paid</span>
                     <span className="text-white text-xl font-bold">
-                      ₹{totalAmount.toFixed(2)}
+                      {currencySign}
+                      {(typeof totalAmount === "number" ? totalAmount : computedTotal).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                 )}
@@ -251,11 +295,129 @@ const BookingConfirmation = () => {
               </motion.div>
             </div>
 
+            {/* Detailed Room Breakdown */}
+            {normalizedCart.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="bg-white rounded-xl shadow-md p-4 sm:p-6"
+              >
+                <h2 className="text-lg sm:text-xl font-serif text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                  Room Details
+                </h2>
+
+                <div className="space-y-4">
+                  {normalizedCart.map((cartItem, index) => {
+                    const room = cartItem.room;
+                    const roomName = room?.Room_Name || room?.Roomtype_Name || "Room";
+                    const roomImage = room?.room_main_image;
+                    
+                    return (
+                      <div
+                        key={cartItem.id || index}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          {/* Room Image */}
+                          {roomImage && (
+                            <div className="sm:w-32 sm:flex-shrink-0">
+                              <img
+                                src={roomImage}
+                                alt={roomName}
+                                className="w-full h-32 sm:h-24 object-cover rounded-lg"
+                              />
+                            </div>
+                          )}
+
+                          {/* Room Details */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                                  Room {index + 1}: {roomName}
+                                </h3>
+                                {room?.Room_Description && (
+                                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                                    {room.Room_Description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Occupancy Details */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                              <div className="bg-gray-50 rounded-lg p-2">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">
+                                  Adults
+                                </p>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {cartItem.adults || 0}
+                                </p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-2">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">
+                                  Children
+                                </p>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {cartItem.children || 0}
+                                </p>
+                              </div>
+                              <div className="bg-green-50 rounded-lg p-2 col-span-2 sm:col-span-1">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">
+                                  Room Price
+                                </p>
+                                <p className="text-sm font-semibold text-green-700">
+                                  {currencySign}
+                                  {cartItem.total
+                                    ? Number(cartItem.total).toLocaleString("en-IN", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })
+                                    : "0.00"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Room Amenities */}
+                            {room?.RoomAmenities && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs text-gray-500 mb-1">Amenities:</p>
+                                <p className="text-xs text-gray-700">
+                                  {room.RoomAmenities}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Total Summary */}
+                <div className="mt-4 pt-4 border-t-2 border-gray-300">
+                  <div className="flex justify-between items-center">
+                    <span className="text-base sm:text-lg font-semibold text-gray-900">
+                      Total Amount
+                    </span>
+                    <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                      {currencySign}
+                      {computedTotal.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Contact Info Card (full width under booking + payment) */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
+              transition={{ delay: 0.3 }}
               className="bg-white rounded-xl shadow-md p-4 sm:p-6"
             >
               <h2 className="text-lg sm:text-xl font-serif text-gray-900 mb-4 pb-3 border-b border-gray-200">
