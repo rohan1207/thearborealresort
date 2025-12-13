@@ -82,7 +82,7 @@ const UnifiedBooking = () => {
   ];
 
   // Pricing configuration (business rules)
-  const DISCOUNT_RATE = 0.20; // 20% discount applied to base rate
+  const DISCOUNT_AMOUNT = 1500; // ₹1500 flat discount applied to base rate only (not on extra adult/child rates)
   const GST_RATE_LOW = 0.05; // 5% GST for base rate < 7500
   const GST_RATE_HIGH = 0.18; // 18% GST for base rate >= 7500 (split as 9% SGST + 9% CGST)
   const GST_THRESHOLD = 7500; // Threshold for GST rate selection
@@ -640,7 +640,7 @@ const UnifiedBooking = () => {
     }
 
     // Helper to build nightly rate strings (comma separated) as required by eZee for multiple nights
-    const buildNightlyRateString = (rateInfo) => {
+    const buildNightlyRateString = (rateInfo, applyDiscount = false) => {
       const exclusiveRates = rateInfo?.exclusive_tax || {};
       const fallbackRate =
         Object.values(exclusiveRates)[0] ??
@@ -660,9 +660,11 @@ const UnifiedBooking = () => {
             ? exclusiveRates[dateKey]
             : fallbackRate;
         
-        // Apply 20% discount to the base rate before sending to eZee
+        // Apply ₹1500 discount only to base rate (not to extra adult/child rates)
         const originalRate = parseFloat(nightlyRateValue ?? 0);
-        const discountedRate = originalRate * (1 - DISCOUNT_RATE);
+        const discountedRate = applyDiscount 
+          ? Math.max(0, originalRate - DISCOUNT_AMOUNT) // Ensure rate doesn't go below 0
+          : originalRate;
         const roundedRate = Math.round(discountedRate * 100) / 100;
         
         nightlyRates.push(String(roundedRate));
@@ -678,9 +680,9 @@ const UnifiedBooking = () => {
       const roomNumber = index + 1;
       
       // Build nightly rate strings for this room
-      const baseRate = buildNightlyRateString(room.room_rates_info);
-      const extraAdultRate = buildNightlyRateString(room.extra_adult_rates_info);
-      const extraChildRate = buildNightlyRateString(room.extra_child_rates_info);
+      const baseRate = buildNightlyRateString(room.room_rates_info, true); // Apply discount to base rate
+      const extraAdultRate = buildNightlyRateString(room.extra_adult_rates_info, false); // No discount on extra adult
+      const extraChildRate = buildNightlyRateString(room.extra_child_rates_info, false); // No discount on extra child
 
       const roomDetail = {
         Rateplan_Id: String(room.roomrateunkid || ""),
@@ -1027,8 +1029,8 @@ const UnifiedBooking = () => {
     
     if (baseExclusive === 0) return null;
     
-    // Apply 20% discount
-    let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+    // Apply ₹1500 flat discount
+    let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
     // Round discounted base to 2 decimals
     discountedBase = Math.round(discountedBase * 100) / 100;
     
@@ -1048,12 +1050,13 @@ const UnifiedBooking = () => {
     
     if (baseExclusive === 0) return null;
     
-    // Apply 20% discount
-    let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+    // Apply ₹1500 flat discount
+    let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
     // Round discounted base to 2 decimals (matching what we send to eZee)
     discountedBase = Math.round(discountedBase * 100) / 100;
     
     // Conditional GST: 5% if base < 7500, else 9% SGST + 9% CGST (to match eZee's calculation)
+    // GST threshold check uses original baseExclusive, but GST is applied to discounted base
     let finalPrice;
     if (baseExclusive < GST_THRESHOLD) {
       // 5% GST for low rates
@@ -1103,7 +1106,8 @@ const UnifiedBooking = () => {
         : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+      // Apply ₹1500 flat discount per night to base rate only
+      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
       discountedBase = Math.round(discountedBase * 100) / 100;
       baseDiscountedTotal += discountedBase;
 
@@ -1116,7 +1120,7 @@ const UnifiedBooking = () => {
         gstTotal += (sgst + cgst);
       }
 
-      // Extra adult rate
+      // Extra adult rate (NO discount applied)
       if (extraAdults > 0) {
         const extraAdultExclusiveRates = room.extra_adult_rates_info?.exclusive_tax || {};
         const fallbackExtraAdultExclusive = Object.values(extraAdultExclusiveRates)[0] ?? room.extra_adult_rates_info?.rack_rate ?? 0;
@@ -1125,7 +1129,8 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackExtraAdultExclusive);
         if (Number.isNaN(extraAdultExclusive)) extraAdultExclusive = 0;
 
-        let discountedExtraAdult = extraAdultExclusive * (1 - DISCOUNT_RATE);
+        // No discount on extra adult rates
+        let discountedExtraAdult = extraAdultExclusive;
         discountedExtraAdult = Math.round(discountedExtraAdult * 100) / 100;
         extraAdultDiscountedTotal += discountedExtraAdult * extraAdults;
 
@@ -1139,7 +1144,7 @@ const UnifiedBooking = () => {
         }
       }
 
-      // Extra child rate
+      // Extra child rate (NO discount applied)
       if (extraChildren > 0) {
         const extraChildExclusiveRates = room.extra_child_rates_info?.exclusive_tax || {};
         const fallbackExtraChildExclusive = Object.values(extraChildExclusiveRates)[0] ?? room.extra_child_rates_info?.rack_rate ?? 0;
@@ -1148,7 +1153,8 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackExtraChildExclusive);
         if (Number.isNaN(extraChildExclusive)) extraChildExclusive = 0;
 
-        let discountedExtraChild = extraChildExclusive * (1 - DISCOUNT_RATE);
+        // No discount on extra child rates
+        let discountedExtraChild = extraChildExclusive;
         discountedExtraChild = Math.round(discountedExtraChild * 100) / 100;
         extraChildDiscountedTotal += discountedExtraChild * extraChildren;
 
@@ -1222,11 +1228,11 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      // Apply 20% discount
-      let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+      // Apply ₹1500 flat discount per night to base rate only
+      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
       discountedBase = Math.round(discountedBase * 100) / 100;
 
-      // Conditional GST
+      // Conditional GST (threshold check uses original baseExclusive, but GST applied to discounted base)
       let baseTotalNight;
       if (baseExclusive < GST_THRESHOLD) {
         baseTotalNight = discountedBase * (1 + GST_RATE_LOW);
@@ -1237,7 +1243,7 @@ const UnifiedBooking = () => {
       }
       baseTotalNight = Math.round(baseTotalNight * 100) / 100;
 
-      // Extra adult rate
+      // Extra adult rate (NO discount applied)
       if (extraAdults > 0) {
         const extraAdultExclusiveRates = room.extra_adult_rates_info?.exclusive_tax || {};
         const fallbackExtraAdultExclusive =
@@ -1250,7 +1256,8 @@ const UnifiedBooking = () => {
             : parseFloat(fallbackExtraAdultExclusive);
         if (Number.isNaN(extraAdultExclusive)) extraAdultExclusive = 0;
 
-        let discountedExtraAdult = extraAdultExclusive * (1 - DISCOUNT_RATE);
+        // No discount on extra adult rates
+        let discountedExtraAdult = extraAdultExclusive;
         discountedExtraAdult = Math.round(discountedExtraAdult * 100) / 100;
         let extraAdultWithGst;
         if (baseExclusive < GST_THRESHOLD) {
@@ -1264,7 +1271,7 @@ const UnifiedBooking = () => {
         extrasTotal += extraAdults * extraAdultWithGst;
       }
 
-      // Extra child rate
+      // Extra child rate (NO discount applied)
       if (extraChildren > 0) {
         const extraChildExclusiveRates = room.extra_child_rates_info?.exclusive_tax || {};
         const fallbackExtraChildExclusive =
@@ -1277,7 +1284,8 @@ const UnifiedBooking = () => {
             : parseFloat(fallbackExtraChildExclusive);
         if (Number.isNaN(extraChildExclusive)) extraChildExclusive = 0;
 
-        let discountedExtraChild = extraChildExclusive * (1 - DISCOUNT_RATE);
+        // No discount on extra child rates
+        let discountedExtraChild = extraChildExclusive;
         discountedExtraChild = Math.round(discountedExtraChild * 100) / 100;
         let extraChildWithGst;
         if (baseExclusive < GST_THRESHOLD) {
@@ -1307,14 +1315,14 @@ const UnifiedBooking = () => {
   };
 
   // Helper to calculate room rates for a specific room (legacy - for display)
-  // IMPORTANT: Applies 20% discount + conditional GST (5% if base < 7500, else 18%)
-  // This includes extra guests if selected
+  // IMPORTANT: Applies ₹1500 flat discount to base rate only + conditional GST (5% if base < 7500, else 18%)
+  // This includes extra guests if selected (no discount on extra rates)
   const calculateRoomRates = (room) => {
     if (!room || !searchData) return null;
     
     // Verify constants are defined
-    if (typeof DISCOUNT_RATE === 'undefined') {
-      console.error('[ERROR] DISCOUNT_RATE is undefined!');
+    if (typeof DISCOUNT_AMOUNT === 'undefined') {
+      console.error('[ERROR] DISCOUNT_AMOUNT is undefined!');
       return null;
     }
 
@@ -1355,14 +1363,13 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      // Apply 20% discount to base rate (as per eZee recommendation)
-      // Formula: discountedBase = baseExclusive * (1 - 0.20) = baseExclusive * 0.80
-      const discountMultiplier = 1 - DISCOUNT_RATE; // 0.80
-      let discountedBase = baseExclusive * discountMultiplier;
+      // Apply ₹1500 flat discount per night to base rate only
+      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
       // Round discounted base to 2 decimals (matching what we send to eZee)
       discountedBase = Math.round(discountedBase * 100) / 100;
       
       // Conditional GST: 5% if base < 7500, else 9% SGST + 9% CGST (to match eZee's calculation)
+      // GST threshold check uses original baseExclusive, but GST applied to discounted base
       let baseTotalNight;
       if (baseExclusive < GST_THRESHOLD) {
         // 5% GST for low rates
@@ -1388,7 +1395,7 @@ const UnifiedBooking = () => {
             };
       }
 
-      // Extra adult rate (exclusive)
+      // Extra adult rate (exclusive) - NO discount applied
       const extraAdultExclusiveRates =
         room.extra_adult_rates_info?.exclusive_tax || {};
       const fallbackExtraAdultExclusive =
@@ -1402,9 +1409,9 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackExtraAdultExclusive);
       if (Number.isNaN(extraAdultExclusive)) extraAdultExclusive = 0;
 
-      // Apply discount to extra adult rate, then calculate with conditional GST
-      let discountedExtraAdult = extraAdultExclusive * (1 - DISCOUNT_RATE);
-      // Round discounted rate to 2 decimals (matching what we send to eZee)
+      // No discount on extra adult rates
+      let discountedExtraAdult = extraAdultExclusive;
+      // Round rate to 2 decimals (matching what we send to eZee)
       discountedExtraAdult = Math.round(discountedExtraAdult * 100) / 100;
       // Use same GST calculation as base rate (5% if base < 7500, else 9% SGST + 9% CGST)
       let extraAdultWithGst;
@@ -1417,7 +1424,7 @@ const UnifiedBooking = () => {
       }
       extraAdultWithGst = Math.round(extraAdultWithGst * 100) / 100;
 
-      // Extra child rate (exclusive)
+      // Extra child rate (exclusive) - NO discount applied
       const extraChildExclusiveRates =
         room.extra_child_rates_info?.exclusive_tax || {};
       const fallbackExtraChildExclusive =
@@ -1431,9 +1438,9 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackExtraChildExclusive);
       if (Number.isNaN(extraChildExclusive)) extraChildExclusive = 0;
 
-      // Apply discount to extra child rate, then calculate with conditional GST
-      let discountedExtraChild = extraChildExclusive * (1 - DISCOUNT_RATE);
-      // Round discounted rate to 2 decimals (matching what we send to eZee)
+      // No discount on extra child rates
+      let discountedExtraChild = extraChildExclusive;
+      // Round rate to 2 decimals (matching what we send to eZee)
       discountedExtraChild = Math.round(discountedExtraChild * 100) / 100;
       // Use same GST calculation as base rate (5% if base < 7500, else 9% SGST + 9% CGST)
       let extraChildWithGst;
@@ -1493,11 +1500,12 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      let discountedBase = baseExclusive * (1 - DISCOUNT_RATE);
+      // Apply ₹1500 flat discount per night to base rate only
+      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
       discountedBase = Math.round(discountedBase * 100) / 100;
       baseDiscountedTotal += discountedBase;
 
-      // GST calculation
+      // GST calculation (threshold check uses original baseExclusive, but GST applied to discounted base)
       if (baseExclusive < GST_THRESHOLD) {
         gstTotal += discountedBase * GST_RATE_LOW;
       } else {
@@ -1506,7 +1514,7 @@ const UnifiedBooking = () => {
         gstTotal += (sgst + cgst);
       }
 
-      // Extra adult calculation
+      // Extra adult calculation (NO discount applied)
       if (extraAdults > 0) {
         const extraAdultExclusiveRates = room.extra_adult_rates_info?.exclusive_tax || {};
         const fallbackExtraAdultExclusive =
@@ -1519,7 +1527,8 @@ const UnifiedBooking = () => {
             : parseFloat(fallbackExtraAdultExclusive);
         if (Number.isNaN(extraAdultExclusive)) extraAdultExclusive = 0;
 
-        let discountedExtraAdult = extraAdultExclusive * (1 - DISCOUNT_RATE);
+        // No discount on extra adult rates
+        let discountedExtraAdult = extraAdultExclusive;
         discountedExtraAdult = Math.round(discountedExtraAdult * 100) / 100;
         
         let extraAdultWithGst;
@@ -1533,7 +1542,7 @@ const UnifiedBooking = () => {
         extraAdultTotal += extraAdults * extraAdultWithGst;
       }
 
-      // Extra child calculation
+      // Extra child calculation (NO discount applied)
       if (extraChildren > 0) {
         const extraChildExclusiveRates = room.extra_child_rates_info?.exclusive_tax || {};
         const fallbackExtraChildExclusive =
@@ -1546,7 +1555,8 @@ const UnifiedBooking = () => {
             : parseFloat(fallbackExtraChildExclusive);
         if (Number.isNaN(extraChildExclusive)) extraChildExclusive = 0;
 
-        let discountedExtraChild = extraChildExclusive * (1 - DISCOUNT_RATE);
+        // No discount on extra child rates
+        let discountedExtraChild = extraChildExclusive;
         discountedExtraChild = Math.round(discountedExtraChild * 100) / 100;
         
         let extraChildWithGst;
