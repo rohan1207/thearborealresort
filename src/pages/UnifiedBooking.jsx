@@ -324,13 +324,9 @@ const UnifiedBooking = () => {
         children: requestedChildren,
       });
 
-      // Log the response for debugging
-      console.log('API Response:', response.data);
-
       // Check if there's an error in the response
       if (response.data.Errors) {
         const errorMessage = response.data.Errors.ErrorMessage || 'No rooms available';
-        console.log('API Error:', errorMessage);
         // Set empty rooms array and show error
         setAvailableRooms([]);
         Swal.fire({
@@ -353,8 +349,6 @@ const UnifiedBooking = () => {
         // If it's an object, check if it has a data property
         roomData = response.data.data || [];
       }
-      
-      console.log('Room data extracted:', roomData.length, 'rooms');
       
       // Use whatever eZee API returns - no custom filtering
       // eZee API already handles all filtering based on availability, occupancy, etc.
@@ -611,12 +605,6 @@ const UnifiedBooking = () => {
 
   // Payment functions - Updated for multi-room support
   const prepareBookingPayload = () => {
-    console.log("=== Preparing Multi-Room Booking Payload ===");
-    console.log("Cart items:", bookingDetails?.cart);
-    console.log("Personal Info:", personalInfo);
-    console.log("Search Data:", searchData);
-    console.log("Booking Details:", bookingDetails);
-
     // Validate required fields
     if (!personalInfo?.email) {
       throw new Error("Email address is required");
@@ -716,11 +704,6 @@ const UnifiedBooking = () => {
       }
 
       roomDetails[`Room_${roomNumber}`] = roomDetail;
-      
-      console.log(`=== Room ${roomNumber} Details ===`);
-      console.log(`Room Name: ${room.Room_Name}`);
-      console.log(`Adults: ${cartItem.adults}, Children: ${cartItem.children}`);
-      console.log(`Rateplan_Id: ${room.roomrateunkid}`);
     });
 
     // Build booking payload
@@ -743,8 +726,6 @@ const UnifiedBooking = () => {
       paymenttypeunkid: selectedGateway || ""
     };
 
-    console.log("=== Final Multi-Room Booking Payload ===");
-    console.log(JSON.stringify(bookingPayload, null, 2));
     return bookingPayload;
   };
 
@@ -753,12 +734,9 @@ const UnifiedBooking = () => {
     return new Promise((resolve, reject) => {
       // Check if Razorpay is already loaded
       if (window.Razorpay && typeof window.Razorpay === 'function') {
-        console.log("✅ Razorpay already loaded");
         resolve();
         return;
       }
-
-      console.log("⏳ Waiting for Razorpay to load...");
       
       // Script should already be in HTML, just wait for it to be available
       let attempts = 0;
@@ -768,7 +746,6 @@ const UnifiedBooking = () => {
         attempts++;
         if (window.Razorpay && typeof window.Razorpay === 'function') {
           clearInterval(checkInterval);
-          console.log(`✅ Razorpay loaded after ${attempts * 100}ms`);
           resolve();
         } else if (attempts >= maxAttempts) {
           clearInterval(checkInterval);
@@ -779,13 +756,8 @@ const UnifiedBooking = () => {
     });
   };
 
-  const openRazorpayPopup = async (reservationNo, totalAmount) => {
+  const openRazorpayPopup = async (bookingPayload, totalAmount) => {
     try {
-      console.log("\n=== STEP 2: Opening Razorpay Popup ===");
-      console.log("Checking Razorpay availability...");
-      console.log("window.Razorpay:", window.Razorpay);
-      console.log("typeof window.Razorpay:", typeof window.Razorpay);
-      
       // Ensure Razorpay script is loaded
       try {
         await loadRazorpayScript();
@@ -799,31 +771,25 @@ const UnifiedBooking = () => {
       
       // Verify Razorpay is available
       if (!window.Razorpay || typeof window.Razorpay !== 'function') {
-        console.error("Razorpay constructor not available:", {
-          exists: !!window.Razorpay,
-          type: typeof window.Razorpay,
-          value: window.Razorpay
-        });
         throw new Error("Razorpay is not available. Please refresh the page and try again.");
       }
-      
-      console.log("Razorpay is available, proceeding...");
       
       // Get currency from first room in cart
       const currencyCode = bookingDetails?.cart?.[0]?.room?.currency_code || "INR";
       
-      // Create Razorpay order
+      // Create Razorpay order (NO booking created yet)
       const orderResponse = await axios.post(
         `${API_BASE_URL}/api/booking/razorpay/create-order`,
         {
           amount: totalAmount,
           currency: currencyCode,
-          receipt: `receipt_${reservationNo}`,
+          receipt: `receipt_${Date.now()}`, // Temporary receipt ID
           notes: {
-            reservationNo,
             email: personalInfo.email,
             phone: personalInfo.phone,
-            name: `${personalInfo.firstName} ${personalInfo.lastName}`
+            name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+            checkIn: searchData.checkIn,
+            checkOut: searchData.checkOut
           }
         }
       );
@@ -833,8 +799,6 @@ const UnifiedBooking = () => {
       }
 
       const { orderId, amount, currency, key } = orderResponse.data;
-      
-      console.log("Razorpay Order Created:", { orderId, amount, currency });
 
       // Configure Razorpay options
       const options = {
@@ -842,7 +806,7 @@ const UnifiedBooking = () => {
         amount: amount,
         currency: currency,
         name: "The Arboreal Resort",
-        description: `Booking Payment - ${reservationNo}`,
+        description: `Booking Payment - ₹${(totalAmount).toFixed(2)}`,
         order_id: orderId,
         prefill: {
           name: `${personalInfo.firstName} ${personalInfo.lastName}`,
@@ -853,29 +817,33 @@ const UnifiedBooking = () => {
           color: "#D97706"
         },
         handler: async function (response) {
-          console.log("\n=== Payment Successful ===");
-          console.log("Payment Response:", response);
+          setProcessing(true); // Keep processing state
           
           try {
-            // Verify payment and confirm booking with eZee
+            // STEP 3: Verify payment and CREATE booking with eZee (NEW FLOW)
             const verifyResponse = await axios.post(
               `${API_BASE_URL}/api/booking/razorpay/verify-payment`,
               {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                reservationNo: reservationNo,
+                bookingData: bookingPayload, // Send booking data to create booking
+                guestInfo: {
+                  firstName: personalInfo.firstName,
+                  lastName: personalInfo.lastName,
+                  email: personalInfo.email,
+                  phone: personalInfo.phone,
+                  name: `${personalInfo.firstName} ${personalInfo.lastName}`
+                },
                 amount: totalAmount,
               }
             );
 
-            if (verifyResponse.data.success && verifyResponse.data.ezeeConfirmed) {
-              console.log("✅ Payment verified and booking confirmed in eZee!");
-              
+            if (verifyResponse.data.success && verifyResponse.data.reservationNo) {
               // Navigate to success page
               navigate("/booking-confirmation", {
                 state: {
-                  reservationNo: reservationNo,
+                  reservationNo: verifyResponse.data.reservationNo,
                   paymentMode: "Online - Razorpay",
                   paymentId: response.razorpay_payment_id,
                   bookingConfirmed: true,
@@ -890,35 +858,77 @@ const UnifiedBooking = () => {
                 }
               });
             } else {
-              throw new Error(verifyResponse.data.message || "Booking confirmation failed");
+              // Booking failed - show error page
+              const requiresRefund = verifyResponse.data.requiresRefund || false;
+              const reservationNo = verifyResponse.data.reservationNo || null;
+              
+              // Navigate to error page
+              navigate("/booking-error", {
+                state: {
+                  errorType: "booking_failed",
+                  message: verifyResponse.data.message || "Booking failed",
+                  paymentId: response.razorpay_payment_id,
+                  reservationNo: reservationNo,
+                  refundInitiated: false, // No auto-refund, admin will handle
+                  requiresRefund: requiresRefund,
+                  guestInfo: {
+                    name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+                    email: personalInfo.email,
+                    phone: personalInfo.phone
+                  },
+                  bookingDetails: {
+                    checkIn: searchData.checkIn,
+                    checkOut: searchData.checkOut,
+                    rooms: searchData.rooms,
+                    totalAmount: totalAmount
+                  }
+                }
+              });
             }
           } catch (verifyError) {
             console.error("Payment verification error:", verifyError);
-            alert("Payment was successful but booking confirmation failed. Please contact support with your payment ID: " + response.razorpay_payment_id);
+            const errorData = verifyError.response?.data || {};
+            const requiresRefund = errorData.requiresRefund || false;
+            const reservationNo = errorData.reservationNo || null;
+            
+            // Navigate to error page
+            navigate("/booking-error", {
+              state: {
+                errorType: "payment_error",
+                message: errorData.message || "Payment verification failed",
+                paymentId: response.razorpay_payment_id,
+                reservationNo: reservationNo,
+                refundInitiated: false, // No auto-refund, admin will handle
+                requiresRefund: requiresRefund,
+                guestInfo: {
+                  name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+                  email: personalInfo.email,
+                  phone: personalInfo.phone
+                },
+                bookingDetails: {
+                  checkIn: searchData.checkIn,
+                  checkOut: searchData.checkOut,
+                  rooms: searchData.rooms,
+                  totalAmount: totalAmount
+                }
+              }
+            });
+          } finally {
+            setProcessing(false);
           }
         },
         modal: {
           ondismiss: function() {
-            console.log("Payment popup closed by user");
             setProcessing(false);
-            alert("Payment cancelled. Your booking (Reservation No: " + reservationNo + ") is pending payment confirmation.");
+            // No booking created, so no need to show any message about pending booking
           }
         }
       };
 
       // Open Razorpay popup
-      console.log("Creating Razorpay instance with options:", {
-        key: options.key ? "***" : "missing",
-        amount: options.amount,
-        currency: options.currency,
-        order_id: options.order_id
-      });
-      
       try {
-      const razorpay = new window.Razorpay(options);
-        console.log("Razorpay instance created, opening popup...");
-      razorpay.open();
-        console.log("Razorpay.open() called successfully");
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
       } catch (razorpayError) {
         console.error("Error creating Razorpay instance or opening popup:", razorpayError);
         throw new Error(`Failed to open payment popup: ${razorpayError.message || 'Unknown error'}`);
@@ -941,28 +951,9 @@ const UnifiedBooking = () => {
     setProcessing(true);
 
     try {
-      // STEP 1: Create booking with eZee API
+      // NEW FLOW: Payment first, then booking
+      // STEP 1: Prepare booking payload (but don't create booking yet)
       const bookingPayload = prepareBookingPayload();
-
-      console.log("STEP 1: Creating booking with eZee API...");
-      console.log("Booking Payload:", JSON.stringify(bookingPayload, null, 2));
-
-      const bookingResponse = await axios.post(
-        `${API_BASE_URL}/api/booking/create`,
-        bookingPayload
-      );
-
-      if (!bookingResponse.data.success) {
-        throw new Error(
-          bookingResponse.data.message || "Booking creation failed"
-        );
-      }
-
-      const { ReservationNo } = bookingResponse.data.data;
-      console.log(
-        "✅ Booking created successfully! ReservationNo:",
-        ReservationNo
-      );
 
       // Calculate total amount from cart
       let totalAmount = 0;
@@ -979,43 +970,28 @@ const UnifiedBooking = () => {
         // Legacy fallback
         totalAmount = bookingDetails.totalPrice + (bookingDetails.extrasCharge || 0);
       }
-      
-      console.log("[Payment Amount Calculation]:", {
-        baseTotal: bookingDetails.totalPrice,
-        extrasCharge: bookingDetails.extrasCharge || 0,
-        totalAmount: totalAmount,
-        note: "This should match eZee's total calculation"
-      });
 
-      // STEP 2: Open Razorpay payment popup
-      await openRazorpayPopup(ReservationNo, totalAmount);
+      // STEP 2: Open Razorpay payment popup (booking will be created after payment)
+      await openRazorpayPopup(bookingPayload, totalAmount);
 
     } catch (error) {
-      console.error("Booking error:", error);
+      console.error("Error preparing booking:", error);
       console.error("Error response:", error.response?.data);
 
-      let errorMessage = "Booking failed. Please try again.";
+      let errorMessage = "Failed to prepare booking. Please try again.";
 
-      if (
-        error.response?.data?.error &&
-        Array.isArray(error.response.data.error)
-      ) {
-        const errorObj = error.response.data.error[0];
-        console.log("=== EZEE ERROR DETAILS ===");
-        console.log("Full error object:", JSON.stringify(errorObj, null, 2));
-        
-        errorMessage =
-          errorObj?.["Error Details"]?.Error_Message ||
-          errorObj?.Error_Message ||
-          errorObj?.error ||
-          JSON.stringify(errorObj);
-      } else if (error.response?.data?.message) {
+      if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
 
-      alert(`Booking Failed\n\n${errorMessage}`);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: errorMessage,
+        confirmButtonColor: "#000000",
+      });
       setProcessing(false);
     }
   };
@@ -1355,16 +1331,6 @@ const UnifiedBooking = () => {
     // So any children selected will be charged as extra
     const extraAdults = Math.max(0, requestedAdults - baseAdults);
     const extraChildren = Math.max(0, requestedChildren - baseChildren);
-    
-    console.log(`[Occupancy Calculation]`, {
-      baseAdults,
-      baseChildren,
-      requestedAdults,
-      requestedChildren,
-      extraAdults,
-      extraChildren,
-      note: baseChildren === 0 ? 'Children are NOT included in base rate - all children will be charged as extra' : 'Some children included in base rate'
-    });
 
     let baseTotal = 0;
     let extrasTotal = 0;
@@ -1420,20 +1386,6 @@ const UnifiedBooking = () => {
               cgstRate: CGST_RATE, 
               gstPercent: `${SGST_RATE * 100}% SGST + ${CGST_RATE * 100}% CGST = ${(SGST_RATE + CGST_RATE) * 100}%` 
             };
-        
-        console.log(`[Rate Calculation Debug - Night ${i + 1}]`, {
-          date: dateString,
-          originalBase: baseExclusive,
-          discountRate: DISCOUNT_RATE,
-          discountMultiplier: discountMultiplier,
-          discountedBase: discountedBase,
-          ...gstDetails,
-          finalPrice: baseTotalNight,
-          calculation: baseExclusive < GST_THRESHOLD
-            ? `${baseExclusive} × ${discountMultiplier} × ${1 + GST_RATE_LOW} = ${baseTotalNight}`
-            : `${baseExclusive} × ${discountMultiplier} = ${discountedBase}, then ${discountedBase} + SGST + CGST = ${baseTotalNight}`,
-          threshold: `Base ${baseExclusive < GST_THRESHOLD ? '<' : '>='} ${GST_THRESHOLD}, using ${effectiveGstRate * 100}% GST`
-        });
       }
 
       // Extra adult rate (exclusive)
@@ -1609,21 +1561,6 @@ const UnifiedBooking = () => {
         
         const extraChildNightTotal = extraChildren * extraChildWithGst;
         extraChildTotal += extraChildNightTotal;
-        
-        // Debug logging for extra child calculation
-        if (i === 0) { // Log only for first night to avoid spam
-          console.log(`[Extra Child Calculation - Night ${i + 1}]`, {
-            date: dateString,
-            rackRate: extraChildExclusive,
-            discountPercent: `${DISCOUNT_RATE * 100}%`,
-            discountedRate: discountedExtraChild,
-            gstRate: baseExclusive < GST_THRESHOLD ? `${GST_RATE_LOW * 100}%` : `${SGST_RATE * 100}% SGST + ${CGST_RATE * 100}% CGST`,
-            rateWithGst: extraChildWithGst,
-            numberOfChildren: extraChildren,
-            totalForNight: extraChildNightTotal,
-            calculation: `${extraChildren} children × ₹${extraChildWithGst.toFixed(2)} = ₹${extraChildNightTotal.toFixed(2)}`
-          });
-        }
       }
     }
 
@@ -1632,23 +1569,6 @@ const UnifiedBooking = () => {
     gstTotal = Math.round(gstTotal * 100) / 100;
     extraAdultTotal = Math.round(extraAdultTotal * 100) / 100;
     extraChildTotal = Math.round(extraChildTotal * 100) / 100;
-
-    // Final debug log
-    console.log(`[Final Rate Calculation Summary]`, {
-      baseTotal: baseTotal,
-      extrasTotal: extrasTotal,
-      total: total,
-      nights: nights,
-      extraAdults: extraAdults,
-      extraChildren: extraChildren,
-      breakdown: {
-        baseDiscounted: baseDiscountedTotal,
-        gst: gstTotal,
-        extraAdults: extraAdultTotal,
-        extraChildren: extraChildTotal,
-        total: total
-      }
-    });
 
     return {
       roomBaseTotal: baseTotal,
@@ -1773,19 +1693,15 @@ const UnifiedBooking = () => {
 
   const fetchPaymentGateways = async () => {
     try {
-      console.log("=== Fetching Payment Gateways ===");
       const response = await axios.get(
         `${API_BASE_URL}/api/booking/payment-gateways`
       );
-      console.log("Payment Gateways Response:", response.data);
 
       if (response.data.success && response.data.data.length > 0) {
         setPaymentGateways(response.data.data);
-        console.log(`Found ${response.data.data.length} Razorpay gateway(s)`);
         // Auto-select first Razorpay gateway
         setSelectedGateway(response.data.data[0].paymenttypeunkid);
       } else {
-        console.log("No Razorpay gateways configured");
         setPaymentGateways([]);
       }
     } catch (error) {
@@ -2644,7 +2560,7 @@ const UnifiedBooking = () => {
 
                               {/* Price & CTA */}
                               <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-10 mb-6">
-                                <div>
+                                <div className="flex-1">
                                   <p className="text-xs text-gray-500 mb-1">From</p>
                                   <p className="text-2xl sm:text-3xl font-serif text-black">
                                     {room.currency_sign}
@@ -2657,9 +2573,32 @@ const UnifiedBooking = () => {
                                     })()}
                                     <span className="text-sm text-gray-600 font-normal"> / night</span>
                                   </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Excluding GST (base rate for {room.base_adult_occupancy || 2} adults{room.base_child_occupancy > 0 ? `, ${room.base_child_occupancy} child${room.base_child_occupancy > 1 ? 'ren' : ''}` : ''})
-                                  </p>
+                                 
+                                 
+                                  
+                                  {/* Minimum Nights Validation */}
+                                  {(() => {
+                                    if (!room.min_nights || !searchData) return null;
+                                    
+                                    const checkInDate = searchData.checkIn;
+                                    const minNightsForDate = room.min_nights[checkInDate];
+                                    
+                                    if (!minNightsForDate) return null;
+                                    
+                                    const minNights = parseInt(minNightsForDate, 10);
+                                    const selectedNights = calculateNights();
+                                    const nightsNeeded = minNights - selectedNights;
+                                    
+                                    if (selectedNights < minNights) {
+                                      return (
+                                        <p className="text-sm text-red-600 mt-2 font-medium">
+                                          You need {nightsNeeded} more {nightsNeeded === 1 ? 'night' : 'nights'} to book this room.
+                                        </p>
+                                      );
+                                    }
+                                    
+                                    return null;
+                                  })()}
                                 </div>
 
                                 {/* View Rates Button */}
@@ -2873,6 +2812,8 @@ const UnifiedBooking = () => {
                                       Booking policies
                                     </button>
 
+                                   
+
                                     <div className="flex items-center gap-3">
                                       {/* Available Rooms Count */}
                                       {(() => {
@@ -2925,7 +2866,24 @@ const UnifiedBooking = () => {
                                             const roomsInCartOfSameType = selectedRoomsCart.filter(
                                               r => r.room.roomrateunkid === room.roomrateunkid
                                             ).length;
-                                            return roomsInCartOfSameType >= minAvailableRooms;
+                                            if (roomsInCartOfSameType >= minAvailableRooms) {
+                                              return true;
+                                            }
+                                            
+                                            // Check minimum nights requirement
+                                            if (room.min_nights && searchData) {
+                                              const checkInDate = searchData.checkIn;
+                                              const minNightsForDate = room.min_nights[checkInDate];
+                                              if (minNightsForDate) {
+                                                const minNights = parseInt(minNightsForDate, 10);
+                                                const selectedNights = calculateNights();
+                                                if (selectedNights < minNights) {
+                                                  return true;
+                                                }
+                                              }
+                                            }
+                                            
+                                            return false;
                                           })()
                                         }
                                         className="flex-1 rounded-full px-4 py-2 bg-black hover:bg-gray-800 text-white text-sm tracking-wider transition-all duration-300 text-center disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -2934,6 +2892,20 @@ const UnifiedBooking = () => {
                                           if (selectedRoomsCart.length >= parseInt(searchData?.rooms || 1)) {
                                             return "Cart Full";
                                           }
+                                          
+                                          // Check minimum nights requirement
+                                          if (room.min_nights && searchData) {
+                                            const checkInDate = searchData.checkIn;
+                                            const minNightsForDate = room.min_nights[checkInDate];
+                                            if (minNightsForDate) {
+                                              const minNights = parseInt(minNightsForDate, 10);
+                                              const selectedNights = calculateNights();
+                                              if (selectedNights < minNights) {
+                                                return "Minimum Nights Required";
+                                              }
+                                            }
+                                          }
+                                          
                                           const minAvailableRooms = parseInt(room.min_ava_rooms || "0", 10);
                                           const roomsInCartOfSameType = selectedRoomsCart.filter(
                                             r => r.room.roomrateunkid === room.roomrateunkid

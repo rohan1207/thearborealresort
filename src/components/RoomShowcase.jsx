@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, memo, useCallback } from "react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
-const RoomShowcase = () => {
+const RoomShowcase = memo(() => {
   const [centerCardIndex, setCenterCardIndex] = useState(0);
 
   const rooms = [
@@ -10,25 +10,25 @@ const RoomShowcase = () => {
       id: 1,
       title: "The Classic Sunroom",
       slug: "classic-sunroom",
-      images: ["/Classic_Sunroom_1.jpg"],
+      images: ["https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/rooms/Classic_Sunroom_1"],
     },
     {
       id: 2,
       title: "Forest Bathtub Room",
       slug: "forest-bathtub-room",
-      images: ["/Forest_Bathtub_07.jpg"],
+      images: ["https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/rooms/Forest_Bathtub_07"],
     },
     {
       id: 3,
       title: "Forest Private Pool Room",
       slug: "forest-private-pool-room",
-      images: ["/Forest_Private_Pool_2.jpg"],
+      images: ["https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/rooms/Forest_Private_Pool_2"],
     },
     {
       id: 4,
       title: "Luxury Sunroom",
       slug: "luxury-sunroom",
-      images: ["/Luxury_Sunroom_Arboreal_01.jpg"],
+      images: ["https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/rooms/Luxury_Sunroom_Arboreal_01"],
     },
   ];
 
@@ -59,13 +59,13 @@ const RoomShowcase = () => {
     ];
   };
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     setCenterCardIndex((prev) => (prev - 1 + rooms.length) % rooms.length);
-  };
+  }, []);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     setCenterCardIndex((prev) => (prev + 1) % rooms.length);
-  };
+  }, []);
 
   const visibleCards = getVisibleCards();
 
@@ -115,17 +115,20 @@ const RoomShowcase = () => {
                   }
                 }}
                 className={`
-                  relative overflow-hidden rounded-sm cursor-pointer transition-all duration-500
-
+                  relative overflow-hidden rounded-sm cursor-pointer transition-all duration-300 ease-out
                   ${isCenter ? "sm:w-[60%] sm:h-[480px] scale-100" : "sm:w-[18%] sm:h-[340px] scale-90 opacity-70"}
-
                   ${isCenter ? "w-[55%] h-[260px]" : "w-[22%] h-[200px]"}
                 `}
+                style={{ willChange: isCenter ? 'transform' : 'auto' }}
               >
                 {/* Image */}
                 <img
                   src={img}
+                  alt={room.title}
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority={isCenter ? "high" : "low"}
                 />
 
                 {/* Overlay for left/right */}
@@ -167,6 +170,8 @@ const RoomShowcase = () => {
       </div>
     </section>
   );
-};
+});
+
+RoomShowcase.displayName = 'RoomShowcase';
 
 export default RoomShowcase;

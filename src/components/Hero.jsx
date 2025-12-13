@@ -20,9 +20,71 @@ const Hero = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
   const videoRef = useRef(null);
   const heroRef = useRef(null);
-  
+
+  // Hardcoded Cloudinary URLs - UPDATE AFTER RUNNING uploadHeroVideo.js
+  // Run: node arboreal-resort-backend/scripts/uploadHeroVideo.js
+  // Then copy the URLs from console output and paste them here
+  // Cloud name: dxevy8mea
+  // Cloudinary Video URLs (High Quality)
+  const CLOUDINARY_VIDEO_DESKTOP = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1920,f_auto/Arboreal/hero/hero4.mp4';
+  const CLOUDINARY_VIDEO_MOBILE = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1280,f_auto/Arboreal/hero/hero4.mp4';
+  const CLOUDINARY_VIDEO_WEBM = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1920,f_webm/Arboreal/hero/hero4.mp4';
+  const CLOUDINARY_VIDEO_POSTER = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,so_1/Arboreal/hero/hero4.jpg';
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      setIsMobile(isMobileDevice);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Progressive loading - load video after page is ready
+  useEffect(() => {
+    if (document.readyState === 'complete') {
+      const timer = setTimeout(() => {
+        setShouldLoadVideo(true);
+      }, isMobile ? 2000 : 1000);
+      return () => clearTimeout(timer);
+    } else {
+      const handleLoad = () => {
+        setTimeout(() => {
+          setShouldLoadVideo(true);
+        }, isMobile ? 2000 : 1000);
+      };
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
+  }, [isMobile]);
+
+  // User interaction trigger (helps with autoplay restrictions)
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (!shouldLoadVideo) {
+        setShouldLoadVideo(true);
+      }
+      if (videoRef.current && !isVideoPlaying) {
+        videoRef.current.play().catch(() => {});
+      }
+    };
+
+    window.addEventListener('scroll', handleUserInteraction, { once: true, passive: true });
+    window.addEventListener('touchstart', handleUserInteraction, { once: true, passive: true });
+    window.addEventListener('click', handleUserInteraction, { once: true, passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+      window.removeEventListener('click', handleUserInteraction);
+    };
+  }, [shouldLoadVideo, isVideoPlaying]);
 
   const openDate = (ref) => {
     if (ref?.current) {
@@ -74,31 +136,14 @@ const Hero = () => {
     }
   };
 
-  // Lazy load video when component is in viewport
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && videoRef.current && !isVideoLoaded) {
-            // Start loading video when in viewport
-            videoRef.current.load();
-            setIsVideoLoaded(true);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
+  // Get video URL based on device
+  const getVideoUrl = () => {
+    if (!CLOUDINARY_VIDEO_DESKTOP || CLOUDINARY_VIDEO_DESKTOP === 'YOUR_DESKTOP_URL_HERE') {
+      // Fallback to local video if Cloudinary URLs not set
+      return '/hero4.mp4';
     }
-
-    return () => {
-      if (heroRef.current) {
-        observer.unobserve(heroRef.current);
-      }
-    };
-  }, [isVideoLoaded]);
+    return isMobile ? CLOUDINARY_VIDEO_MOBILE : CLOUDINARY_VIDEO_DESKTOP;
+  };
 
   const handleVideoLoaded = useCallback(() => {
     setIsVideoLoaded(true);
@@ -123,20 +168,22 @@ const Hero = () => {
 
   return (
     <div ref={heroRef} className="relative h-screen w-full overflow-hidden">
-      {/* Placeholder Image - shown while video is loading */}
-      {!isVideoPlaying && (
+      {/* Poster Image - shown while video is loading */}
+      {(CLOUDINARY_VIDEO_POSTER !== 'YOUR_POSTER_URL_HERE' ? CLOUDINARY_VIDEO_POSTER : '/video_alt.png') && !isVideoPlaying && (
         <img
-          src="/video_alt.png"
+          src={CLOUDINARY_VIDEO_POSTER !== 'YOUR_POSTER_URL_HERE' ? CLOUDINARY_VIDEO_POSTER : '/video_alt.png'}
           alt="The Arboreal Resort"
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
           style={{ 
             opacity: isVideoPlaying ? 0 : 1,
             zIndex: 1
           }}
+          loading="eager"
+          fetchPriority="high"
         />
       )}
 
-      {/* Background Video */}
+      {/* Mute/Unmute Button */}
       <button
         onClick={toggleMute}
         className="absolute bottom-5 right-6 z-20 bg-black/50 text-white rounded-full p-3 hover:bg-black/70 transition-colors"
@@ -145,25 +192,38 @@ const Hero = () => {
         {isMuted ? <FiVolumeX /> : <FiVolume2 />}
       </button>
 
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        playsInline
-        muted={isMuted}
-        preload="metadata"
-        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-        style={{ 
-          willChange: 'auto',
-          opacity: isVideoPlaying ? 1 : 0,
-          zIndex: 2
-        }}
-        onLoadedData={handleVideoLoaded}
-        onCanPlay={handleVideoCanPlay}
-        onPlay={handleVideoPlay}
-      >
-        <source src="/hero4.mp4" type="video/mp4" />
-      </video>
+      {/* Cloudinary Optimized Video */}
+      {shouldLoadVideo && (
+        <video
+          ref={videoRef}
+          autoPlay
+          loop
+          playsInline
+          muted={isMuted}
+          preload={isMobile ? "none" : "metadata"}
+          poster={CLOUDINARY_VIDEO_POSTER !== 'YOUR_POSTER_URL_HERE' ? CLOUDINARY_VIDEO_POSTER : '/video_alt.png'}
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+          style={{ 
+            willChange: 'auto',
+            opacity: isVideoPlaying ? 1 : 0,
+            zIndex: 2
+          }}
+          onLoadedData={handleVideoLoaded}
+          onCanPlay={handleVideoCanPlay}
+          onPlay={handleVideoPlay}
+          onError={(e) => {
+            console.error('Video error:', e);
+            setIsVideoPlaying(false);
+          }}
+        >
+          {/* WebM first (better compression, high quality) */}
+          {CLOUDINARY_VIDEO_WEBM !== 'YOUR_WEBM_URL_HERE' && (
+            <source src={CLOUDINARY_VIDEO_WEBM} type="video/webm" />
+          )}
+          {/* MP4 fallback */}
+          <source src={getVideoUrl()} type="video/mp4" />
+        </video>
+      )}
 
       {/* Gradient Overlay - lighter to show more of the video */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40" />

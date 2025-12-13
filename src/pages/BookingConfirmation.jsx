@@ -521,7 +521,7 @@ const BookingConfirmation = () => {
               <ul className="space-y-2.5 text-xs sm:text-sm text-gray-700">
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 mt-1 font-bold">•</span>
-                  <span>Check-in: After 2:00 PM | Check-out: Before 11:00 AM</span>
+                  <span>Check-in:  1:00 PM | Check-out:  11:00 AM</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 mt-1 font-bold">•</span>

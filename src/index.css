@@ -9,8 +9,16 @@
 
 /* Base styles */
 html {
-  scroll-behavior: smooth;
+  /* Lenis will handle smooth scrolling, so we disable native smooth scroll */
+  scroll-behavior: auto;
   @apply overflow-x-hidden;
+  /* Performance optimizations */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Better scroll performance */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -18,12 +26,64 @@ body {
   margin: 0;
   padding: 0;
   width: 100%;
+  /* Performance optimizations for smooth scrolling */
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  /* Reduce motion for better performance */
+  @media (prefers-reduced-motion: reduce) {
+    scroll-behavior: auto;
+  }
 }
 
 #root {
   @apply overflow-x-hidden;
   width: 100%;
   position: relative;
+  /* GPU acceleration for smoother scrolling */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Performance optimizations for images */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Optimize animations and transitions - only for animated elements */
+[data-framer-component],
+.motion-component,
+img {
+  /* Reduce repaints during scroll */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Optimize framer-motion animations */
+[data-framer-component] {
+  will-change: transform;
+}
+
+/* Lenis smooth scroll optimizations */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
 }
 
 /* Custom font classes */

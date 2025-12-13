@@ -15,7 +15,10 @@ import BlogPage from "./pages/BlogPage";
 import BlogDetail from "./pages/BlogDetail";
 import BookingForm from "./pages/BookingForm";
 import BookingConfirmation from "./pages/BookingConfirmation";
+import BookingError from "./pages/BookingError";
+import BookingErrorTest from "./pages/BookingErrorTest";
 import ScrollToTop from "./components/ScrollToTop";
+import SmoothScroll from "./components/SmoothScroll";
 import UnifiedBooking from "./pages/UnifiedBooking";
 
 // New Booking Flow Pages
@@ -28,9 +31,10 @@ const App = () => {
   return (
     <>
       <BrowserRouter>
-        <Navbar />
-        <ScrollToTop />
-        <Routes>
+        <SmoothScroll>
+          <Navbar />
+          <ScrollToTop />
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/rooms" element={<Rooms />} />
@@ -58,11 +62,20 @@ const App = () => {
             path="/booking-confirmation"
             element={<BookingConfirmation />}
           />
+          <Route
+            path="/booking-error"
+            element={<BookingError />}
+          />
+          <Route
+            path="/booking-error-test"
+            element={<BookingErrorTest />}
+          />
 
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogDetail />} />
         </Routes>
         <Footer />
+        </SmoothScroll>
       </BrowserRouter>
     </>
   );

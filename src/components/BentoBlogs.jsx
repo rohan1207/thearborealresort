@@ -1,9 +1,9 @@
-import React from "react";
+import React, { memo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import blogsData from "../Data/blogsdata.json";
 
-const BentoBlogs = () => {
+const BentoBlogs = memo(() => {
   const slugify = (s) =>
     s
       .toLowerCase()
@@ -31,7 +31,7 @@ const BentoBlogs = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.15,
+        staggerChildren: 0.1,
       },
     },
   };
@@ -42,8 +42,8 @@ const BentoBlogs = () => {
       opacity: 1,
       y: 0,
       transition: {
-        duration: 0.6,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        duration: 0.4,
+        ease: "easeOut",
       },
     },
   };
@@ -95,7 +95,11 @@ const BentoBlogs = () => {
                   <motion.img
                     src={blog.image}
                     alt={blog.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
+                    style={{ willChange: 'transform' }}
                   />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
@@ -294,6 +298,8 @@ const BentoBlogs = () => {
       </div>
     </section>
   );
-};
+});
+
+BentoBlogs.displayName = 'BentoBlogs';
 
 export default BentoBlogs;

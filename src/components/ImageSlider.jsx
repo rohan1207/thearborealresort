@@ -8,37 +8,52 @@ const ImageSlider = () => {
   const [viewportWidth, setViewportWidth] = useState(0);
   const [loadedImages, setLoadedImages] = useState(new Set());
   const resizeTimeoutRef = useRef(null);
+  const [singleSetWidth, setSingleSetWidth] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(true);
 
-  const images = [
-    { src: '/slider5.webp', alt: 'Resort view 5' },
-    { src: '/slider6.webp', alt: 'Resort view 6' },
-    { src: '/slider7.webp', alt: 'Resort view 7' },
-    { src: '/slider8.webp', alt: 'Resort view 8' },
-    { src: '/slider9.webp', alt: 'Resort view 9' },
-    { src: '/slider10.webp', alt: 'Resort view 10' },
-    { src: '/slider11.webp', alt: 'Resort view 11' },
-    { src: '/slider12.webp', alt: 'Resort view 12' },
-    { src: '/slider13.webp', alt: 'Resort view 13' },
-    { src: '/slider14.webp', alt: 'Resort view 14' },
-    { src: '/slider15.webp', alt: 'Resort view 15' },
-    { src: '/slider16.webp', alt: 'Resort view 16' },
-    { src: '/slider17.webp', alt: 'Resort view 17' },
-    { src: '/slider18.webp', alt: 'Resort view 18' },
-    { src: '/slider19.webp', alt: 'Resort view 19' },
-    { src: '/slider20.webp', alt: 'Resort view 20' },
-    { src: '/slider21.webp', alt: 'Resort view 21' },
-    { src: '/slider22.webp', alt: 'Resort view 22' },
-    { src: '/slider23.webp', alt: 'Resort view 23' },
-    { src: '/slider24.webp', alt: 'Resort view 24' },
-    { src: '/slider25.webp', alt: 'Resort view 25' },
-    { src: '/slider26.webp', alt: 'Resort view 26' },
+  // Hardcoded Cloudinary URLs - Cloud name: dxevy8mea
+  const cloudinaryImages = [
+    { name: 'slider5', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider5' },
+    { name: 'slider6', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider6' },
+    { name: 'slider7', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider7' },
+    { name: 'slider8', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider8' },
+    { name: 'slider9', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider9' },
+    { name: 'slider10', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider10' },
+    { name: 'slider11', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider11' },
+    { name: 'slider12', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider12' },
+    { name: 'slider13', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider13' },
+    { name: 'slider14', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider14' },
+    { name: 'slider15', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider15' },
+    { name: 'slider16', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider16' },
+    { name: 'slider17', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider17' },
+    { name: 'slider18', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider18' },
+    { name: 'slider19', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider19' },
+    { name: 'slider20', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider20' },
+    { name: 'slider21', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider21' },
+    { name: 'slider22', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider22' },
+    { name: 'slider23', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider23' },
+    { name: 'slider24', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider24' },
+    { name: 'slider25', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider25' },
+    { name: 'slider26', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider26' },
   ];
+
+  // Use Cloudinary URLs - duplicate for infinite scroll
+  const baseImages = cloudinaryImages.map((img, index) => ({
+    src: img.url,
+    alt: `Resort view ${index + 5}`
+  }));
+  
+  // Duplicate images for seamless infinite scroll
+  const images = [...baseImages, ...baseImages];
 
   // Debounced dimension update
   const updateDimensions = useCallback(() => {
     if (containerRef.current) {
-      setTotalWidth(containerRef.current.scrollWidth);
+      const total = containerRef.current.scrollWidth;
+      setTotalWidth(total);
       setViewportWidth(window.innerWidth);
+      // Calculate width of single set (half of total since we duplicate)
+      setSingleSetWidth(total / 2);
     }
   }, []);
 
@@ -72,26 +87,37 @@ const ImageSlider = () => {
     };
   }, [updateDimensions]);
 
-  // Auto-scroll with pause-drag effect - optimized
+  // Auto-scroll with infinite loop - seamless
   useEffect(() => {
-    if (totalWidth === 0 || viewportWidth === 0) return;
+    if (totalWidth === 0 || viewportWidth === 0 || singleSetWidth === 0) return;
 
     const interval = setInterval(() => {
       setCurrentPosition(prev => {
-        const maxScroll = totalWidth - viewportWidth;
         const scrollAmount = 400; // Move by 400px each time
-        const nextPosition = prev + scrollAmount;
+        let nextPosition = prev + scrollAmount;
         
-        // Only loop back when we've actually reached the end
-        if (nextPosition >= maxScroll) {
-          return 0; // Loop back to start
+        // When we've scrolled past the first set, reset to equivalent position in first set
+        // This creates seamless infinite loop
+        if (nextPosition >= singleSetWidth) {
+          // Disable transition for instant reset
+          setIsTransitioning(false);
+          nextPosition = nextPosition - singleSetWidth;
+          
+          // Re-enable transition after a brief moment
+          setTimeout(() => {
+            setIsTransitioning(true);
+          }, 50);
+          
+          return nextPosition;
         }
+        
+        setIsTransitioning(true);
         return nextPosition;
       });
     }, 3000); // 3 second pause
 
     return () => clearInterval(interval);
-  }, [totalWidth, viewportWidth]);
+  }, [totalWidth, viewportWidth, singleSetWidth]);
 
   // Memoize image size calculations
   const getImageClass = useCallback((index) => {
@@ -130,16 +156,44 @@ const ImageSlider = () => {
   }, []);
 
   const handlePrevious = useCallback(() => {
-    setCurrentPosition(prev => Math.max(0, prev - 400));
-  }, []);
+    setCurrentPosition(prev => {
+      const scrollAmount = 400;
+      const newPos = prev - scrollAmount;
+      
+      // If we go before start, jump to equivalent position in second set
+      if (newPos < 0 && singleSetWidth > 0) {
+        return singleSetWidth + newPos;
+      }
+      return Math.max(0, newPos);
+    });
+  }, [singleSetWidth]);
 
   const handleNext = useCallback(() => {
-    const maxScroll = totalWidth - viewportWidth;
+    if (singleSetWidth === 0) return;
+    
     setCurrentPosition(prev => {
-      const nextPos = prev + 400;
-      return nextPos >= maxScroll ? maxScroll : nextPos;
+      const scrollAmount = 400;
+      let nextPos = prev + scrollAmount;
+      
+      // When we reach end of first set, continue seamlessly
+      // When we reach end of second set, reset to equivalent in first set
+      if (nextPos >= singleSetWidth) {
+        // Disable transition for instant reset
+        setIsTransitioning(false);
+        nextPos = nextPos - singleSetWidth;
+        
+        // Re-enable transition after a brief moment
+        setTimeout(() => {
+          setIsTransitioning(true);
+        }, 50);
+        
+        return nextPos;
+      }
+      
+      setIsTransitioning(true);
+      return nextPos;
     });
-  }, [totalWidth, viewportWidth]);
+  }, [singleSetWidth]);
 
   return (
     <div className="relative w-full bg-[#f5f3ed] py-8 sm:py-12">
@@ -176,30 +230,32 @@ const ImageSlider = () => {
         <div className="overflow-hidden">
           <div
             ref={containerRef}
-            className="flex items-center gap-4 sm:gap-6 px-4 sm:px-8 transition-transform duration-1000 ease-in-out"
+            className="flex items-center gap-4 sm:gap-6 px-4 sm:px-8"
             style={{
               transform: `translate3d(-${currentPosition}px, 0, 0)`,
-              willChange: 'transform'
+              willChange: 'transform',
+              transition: isTransitioning ? 'transform 1s ease-in-out' : 'none'
             }}
           >
             {images.map((image, index) => {
-              const imageClass = getImageClass(index);
+              // Use modulo to get correct image class pattern
+              const originalIndex = index % baseImages.length;
+              const imageClass = getImageClass(originalIndex);
+              const isPriority = index < 6 || (index >= baseImages.length && index < baseImages.length + 6); // First 6 of each set load eagerly
               
               return (
                 <div
-                  key={index}
+                  key={`${image.src}-${index}`}
                   className="flex-shrink-0"
                 >
                   <img
                     src={image.src}
                     alt={image.alt}
-                    loading={index < 6 ? "eager" : "lazy"}
+                    loading={isPriority ? "eager" : "lazy"}
                     decoding="async"
+                    fetchPriority={isPriority ? "high" : "low"}
                     className={`${imageClass} object-cover rounded-lg shadow-xl`}
-                    style={{ 
-                      willChange: 'auto'
-                    }}
-                    onLoad={() => handleImageLoad(index)}
+                    onLoad={() => handleImageLoad(originalIndex)}
                   />
                 </div>
               );
@@ -210,16 +266,22 @@ const ImageSlider = () => {
 
       {/* Progress Indicator */}
       <div className="flex justify-center gap-2 mt-8">
-        {Array.from({ length: Math.ceil(images.length / 2) }).map((_, index) => (
-          <div
-            key={index}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              Math.floor(currentPosition / 400) === index
-                ? 'w-8 bg-gray-800'
-                : 'w-2 bg-gray-400'
-            }`}
-          />
-        ))}
+        {Array.from({ length: Math.ceil(baseImages.length / 2) }).map((_, index) => {
+          // Calculate position relative to first set only
+          const positionInSet = currentPosition % singleSetWidth;
+          const activeIndex = Math.floor(positionInSet / 400);
+          
+          return (
+            <div
+              key={index}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                activeIndex === index
+                  ? 'w-8 bg-gray-800'
+                  : 'w-2 bg-gray-400'
+              }`}
+            />
+          );
+        })}
       </div>
     </div>
   );

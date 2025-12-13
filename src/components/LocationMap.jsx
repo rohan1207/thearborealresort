@@ -48,6 +48,7 @@ const LocationMap = () => {
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               title="The Arboreal Resort Location"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
             ></iframe>
           </div>
         </motion.div>

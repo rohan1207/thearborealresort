@@ -23,31 +23,20 @@ const BookingPayment = () => {
       return;
     }
 
-    console.log("=== BookingPayment Page Loaded ===");
-    console.log("Room:", room);
-    console.log("Search Data:", searchData);
-    console.log("Booking Details:", bookingDetails);
-    console.log("Personal Info:", personalInfo);
-    console.log("Selected Extras:", selectedExtras);
-
     fetchPaymentGateways();
   }, []);
 
   const fetchPaymentGateways = async () => {
     try {
-      console.log("=== Fetching Payment Gateways ===");
       const response = await axios.get(
         `${API_BASE_URL}/api/booking/payment-gateways`
       );
-      console.log("Payment Gateways Response:", response.data);
 
       if (response.data.success && response.data.data.length > 0) {
         setPaymentGateways(response.data.data);
-        console.log(`Found ${response.data.data.length} Razorpay gateway(s)`);
         // Auto-select first Razorpay gateway
         setSelectedGateway(response.data.data[0].paymenttypeunkid);
       } else {
-        console.log("No Razorpay gateways configured");
         setPaymentGateways([]);
       }
     } catch (error) {
@@ -66,8 +55,6 @@ const BookingPayment = () => {
 
   const openRazorpayPopup = async (reservationNo, totalAmount) => {
     try {
-      console.log("\n=== STEP 2: Opening Razorpay Popup ===");
-      
       // Create Razorpay order
       const orderResponse = await axios.post(
         `${API_BASE_URL}/api/booking/razorpay/create-order`,
@@ -89,8 +76,6 @@ const BookingPayment = () => {
       }
 
       const { orderId, amount, currency, key } = orderResponse.data;
-      
-      console.log("Razorpay Order Created:", { orderId, amount, currency });
 
       // Configure Razorpay options
       const options = {
@@ -109,9 +94,6 @@ const BookingPayment = () => {
           color: "#D97706" // Amber color matching your theme
         },
         handler: async function (response) {
-          console.log("\n=== Payment Successful ===");
-          console.log("Payment Response:", response);
-          
           try {
             // Verify payment and confirm booking with eZee
             const verifyResponse = await axios.post(
@@ -125,8 +107,6 @@ const BookingPayment = () => {
             );
 
             if (verifyResponse.data.success && verifyResponse.data.ezeeConfirmed) {
-              console.log("✅ Payment verified and booking confirmed in eZee!");
-              
               // Navigate to success page
               navigate("/booking-confirmation", {
                 state: {
@@ -154,7 +134,6 @@ const BookingPayment = () => {
         },
         modal: {
           ondismiss: function() {
-            console.log("Payment popup closed by user");
             setProcessing(false);
             alert("Payment cancelled. Your booking (Reservation No: " + reservationNo + ") is pending payment confirmation.");
           }
@@ -179,9 +158,6 @@ const BookingPayment = () => {
       // STEP 1: Create booking with eZee API
       const bookingPayload = await prepareBookingPayload();
 
-      console.log("STEP 1: Creating booking with eZee API...");
-      console.log("Booking Payload:", JSON.stringify(bookingPayload, null, 2));
-
       const bookingResponse = await axios.post(
         `${API_BASE_URL}/api/booking/create`,
         bookingPayload
@@ -194,10 +170,6 @@ const BookingPayment = () => {
       }
 
       const { ReservationNo } = bookingResponse.data.data;
-      console.log(
-        "✅ Booking created successfully! ReservationNo:",
-        ReservationNo
-      );
 
       // Calculate total amount
       const totalAmount =
@@ -217,8 +189,6 @@ const BookingPayment = () => {
         Array.isArray(error.response.data.error)
       ) {
         const errorObj = error.response.data.error[0];
-        console.log("=== EZEE ERROR DETAILS ===");
-        console.log("Full error object:", JSON.stringify(errorObj, null, 2));
         
         errorMessage =
           errorObj?.["Error Details"]?.Error_Message ||
@@ -238,26 +208,6 @@ const BookingPayment = () => {
 
   // Helper function to prepare booking payload
   const prepareBookingPayload = () => {
-    console.log("=== Preparing Booking Payload ===");
-    console.log("Room data:", room);
-    console.log("Personal Info:", personalInfo);
-    console.log("Search Data:", searchData);
-    console.log("Booking Details:", bookingDetails);
-    
-    // Log the critical IDs
-    console.log("=== CRITICAL IDS FROM ROOM OBJECT ===");
-    console.log("Package_Id (will be used for Rateplan_Id):", room.Package_Id);
-    console.log("roomrateunkid:", room.roomrateunkid);
-    console.log("ratetypeunkid (Ratetype_Id):", room.ratetypeunkid);
-    console.log("roomtypeunkid (Roomtype_Id):", room.roomtypeunkid);
-    console.log("rack_rate (baserate):", room.room_rates_info?.rack_rate);
-    console.log("extra_adult rack_rate:", room.extra_adult_rates_info?.rack_rate);
-    console.log("extra_child rack_rate:", room.extra_child_rates_info?.rack_rate);
-    console.log("\n=== RATE INFO STRUCTURE ===");
-    console.log("room_rates_info.exclusive_tax:", room.room_rates_info?.exclusive_tax);
-    console.log("extra_adult_rates_info.exclusive_tax:", room.extra_adult_rates_info?.exclusive_tax);
-    console.log("extra_child_rates_info.exclusive_tax:", room.extra_child_rates_info?.exclusive_tax);
-
     // Validate required fields
     if (!personalInfo?.email) {
       throw new Error("Email address is required");
@@ -338,10 +288,6 @@ const BookingPayment = () => {
       // Use default age "5" for all children
       roomDetails.ExtraChild_Age = "5";
     }
-    
-    // Log the constructed room details
-    console.log("=== CONSTRUCTED ROOM DETAILS ===");
-    console.log(JSON.stringify(roomDetails, null, 2));
 
     // Build booking payload - EXACTLY matching Postman collection example
     const bookingPayload = {
@@ -376,15 +322,6 @@ const BookingPayment = () => {
     //   bookingPayload.ExtraCharge = selectedExtras;
     // }
 
-    console.log(
-      "Extras disabled for testing. Selected extras:",
-      selectedExtras
-    );
-
-    console.log(
-      "Final booking payload:",
-      JSON.stringify(bookingPayload, null, 2)
-    );
     return bookingPayload;
   };
 

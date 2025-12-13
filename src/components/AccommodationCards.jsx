@@ -1,12 +1,12 @@
-import React from "react";
+import React, { memo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
-const AccommodationCards = () => {
+const AccommodationCards = memo(() => {
   const accommodations = [
     {
       id: 1,
-      image: "/ac2.webp",
+      image: "https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/accommodation/ac2",
       category: "ACCOMMODATION",
       title: "The Tree-House Resort",
       description:
@@ -14,7 +14,7 @@ const AccommodationCards = () => {
     },
     {
       id: 2,
-      image: "/ac.png",
+      image: "https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/accommodation/ac",
       category: "ACCOMMODATION",
       title: "The Amazing Nature",
       description:
@@ -30,10 +30,10 @@ const AccommodationCards = () => {
           {accommodations.map((item, index) => (
             <motion.div
               key={item.id}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.2, duration: 0.8 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ delay: index * 0.1, duration: 0.5, ease: "easeOut" }}
               className="group"
             >
               {/* Image Container */}
@@ -42,8 +42,12 @@ const AccommodationCards = () => {
                   src={item.image}
                   alt={item.title}
                   className="w-full h-[280px] sm:h-[350px] md:h-[500px] object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
                   whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.6 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  style={{ willChange: 'transform' }}
                 />
               </div>
 
@@ -94,6 +98,8 @@ const AccommodationCards = () => {
       </div>
     </section>
   );
-};
+});
+
+AccommodationCards.displayName = 'AccommodationCards';
 
 export default AccommodationCards;
