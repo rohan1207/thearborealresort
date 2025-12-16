@@ -180,9 +180,9 @@ const Footer = () => {
                   </span>
                 </a>
                 <div className="flex flex-col items-start gap-1">
-                  <a href="tel:+918380035320" className="inline-flex items-start gap-2 text-gray-700 hover:text-gray-900 text-xs sm:text-sm font-light">
+                  <a href="tel:+918065423948‬" className="inline-flex items-start gap-2 text-gray-700 hover:text-gray-900 text-xs sm:text-sm font-light">
                     <FiPhone className="w-4 h-4" />
-                    +918380035320
+                    +91 8065423948‬  *(+91 is essential)
                   </a>
                  
                 </div>

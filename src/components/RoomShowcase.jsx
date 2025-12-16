@@ -108,7 +108,10 @@ const RoomShowcase = memo(() => {
               <div
                 key={room.id + position}
                 onClick={() => {
-                  if (!isCenter) {
+                  if (isCenter) {
+                    // Clicking center card redirects to room page
+                    handleRoomNameClick(room.title, room.slug);
+                  } else {
                     // Clicking left/right makes it center
                     if (position === "left") goToPrevious();
                     if (position === "right") goToNext();

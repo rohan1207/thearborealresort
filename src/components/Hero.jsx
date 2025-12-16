@@ -30,10 +30,10 @@ const Hero = () => {
   // Then copy the URLs from console output and paste them here
   // Cloud name: dxevy8mea
   // Cloudinary Video URLs (High Quality)
-  const CLOUDINARY_VIDEO_DESKTOP = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1920,f_auto/Arboreal/hero/hero4.mp4';
-  const CLOUDINARY_VIDEO_MOBILE = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1280,f_auto/Arboreal/hero/hero4.mp4';
-  const CLOUDINARY_VIDEO_WEBM = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1920,f_webm/Arboreal/hero/hero4.mp4';
-  const CLOUDINARY_VIDEO_POSTER = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,so_1/Arboreal/hero/hero4.jpg';
+  const CLOUDINARY_VIDEO_DESKTOP = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1920,f_auto/Arboreal/hero/YOUTUBE.mp4';
+  const CLOUDINARY_VIDEO_MOBILE = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1280,f_auto/Arboreal/hero/YOUTUBE.mp4';
+  const CLOUDINARY_VIDEO_WEBM = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,w_1920,f_webm/Arboreal/hero/YOUTUBE.mp4';
+  const CLOUDINARY_VIDEO_POSTER = 'https://res.cloudinary.com/dxevy8mea/video/upload/q_auto:good,so_1/Arboreal/hero/YOUTUBE.jpg';
 
   // Detect mobile device
   useEffect(() => {
@@ -162,6 +162,17 @@ const Hero = () => {
     }
   }, []);
 
+  const handleVideoEnded = useCallback(() => {
+    // Ensure the video loops smoothly even if the native loop attribute
+    // doesn't re-trigger playback in some browsers.
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => {
+        // Ignore autoplay restrictions on manual loop
+      });
+    }
+  }, []);
+
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => !prev);
   }, []);
@@ -211,6 +222,7 @@ const Hero = () => {
           onLoadedData={handleVideoLoaded}
           onCanPlay={handleVideoCanPlay}
           onPlay={handleVideoPlay}
+          onEnded={handleVideoEnded}
           onError={(e) => {
             console.error('Video error:', e);
             setIsVideoPlaying(false);

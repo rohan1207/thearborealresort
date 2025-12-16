@@ -144,7 +144,7 @@ const LocationMap = () => {
               Nearest Airport
             </h3>
             <p className="text-sm text-gray-600 font-light px-4">
-              Pune Airport 30 minutes away
+            Mumbai 3 Hours / Pune 2 Hours
             </p>
           </div>
 

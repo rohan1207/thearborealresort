@@ -34,8 +34,8 @@ const ContactUs = () => {
     {
       icon: <FiPhone className="w-6 h-6" />,
       title: "Call Us",
-      details: ["+91 9545583535", "+91 8380035320"],
-      link: "tel:918380035320+",
+      details: ["‪+91 8065423948‬  *(+91 is essential)"],
+      link: "tel:8065423948‬",
     },
     {
       icon: <FiMail className="w-6 h-6" />,
