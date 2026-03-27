@@ -44,6 +44,9 @@ export default function VillaSlider() {
   const [direction, setDirection] = useState(1);
   const [transitioning, setTransitioning] = useState(false);
   const [hoverSide, setHoverSide] = useState(null);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= 640 : false
+  );
   const [size, setSize] = useState({ w: 1100, h: 420 });
   const [driftProgress, setDriftProgress] = useState(0);
 
@@ -63,6 +66,14 @@ export default function VillaSlider() {
     ro.observe(el);
     setSize({ w: el.offsetWidth, h: el.offsetHeight });
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const onResize = () => setIsMobile(window.innerWidth <= 640);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const startDrift = useCallback(() => {
@@ -139,10 +150,15 @@ export default function VillaSlider() {
   // Eased progress for the translate
   const ep = ease(progress);
   // Outgoing image slides fully off screen in its direction
-  const slideOutX = transitioning
+  const slideOutX = !isMobile && transitioning
     ? direction === 1
       ? -(size.w * 1.08) * ep
       : (size.w * 1.08) * ep
+    : 0;
+  const slideOutY = isMobile && transitioning
+    ? direction === 1
+      ? -(size.h * 1.08) * ep
+      : (size.h * 1.08) * ep
     : 0;
 
   // Fixed wave clip — computed once per direction+size, not per frame
@@ -165,15 +181,15 @@ export default function VillaSlider() {
         }
         .v-ornament{display:flex;gap:7px;margin-bottom:30px;}
         .v-ornament span{width:4px;height:4px;border-radius:50%;background:#b5a98a;opacity:0.65;}
-        .v-wrap{position:relative;width:min(72vw,980px);isolation:isolate;}
+        .v-wrap{position:relative;width:min(68vw,920px);isolation:isolate;}
         .v-peek{
-          position:absolute;top:0;height:100%;width:92px;overflow:hidden;z-index:0;
+          position:absolute;top:0;height:100%;width:80px;overflow:hidden;z-index:0;
         }
         .v-peek-left{right:100%;border-radius:3px 0 0 3px;}
         .v-peek-right{left:100%;border-radius:0 3px 3px 0;}
         .v-peek img{
           position:absolute;top:0;height:100%;
-          width:calc(min(72vw,980px) + 92px);max-width:none;
+          width:calc(min(68vw,920px) + 80px);max-width:none;
           object-fit:cover;pointer-events:none;user-select:none;
         }
         .v-peek-left img{right:0;object-position:right center;}
@@ -222,6 +238,41 @@ export default function VillaSlider() {
           font-style:normal;font-weight:400;font-size:clamp(13px,1.2vw,15px);
           letter-spacing:0.08em;color:#6B6B6B;
         }
+        @media (max-width: 640px){
+          .v-root{
+            min-height:auto;
+            padding:32px 14px 36px;
+          }
+          .v-wrap{
+            width:min(88vw,360px);
+          }
+          .v-peek{
+            display:none;
+          }
+          .v-stage{
+            aspect-ratio:3/4;
+          }
+          .v-zone{
+            width:100%;
+            height:50%;
+          }
+          .v-zone-l{
+            top:0;
+            left:0;
+            justify-content:center;
+            align-items:flex-start;
+            padding-left:0;
+            padding-top:14px;
+          }
+          .v-zone-r{
+            bottom:0;
+            right:0;
+            justify-content:center;
+            align-items:flex-end;
+            padding-right:0;
+            padding-bottom:14px;
+          }
+        }
       `}</style>
 
       <div className="v-root">
@@ -241,14 +292,22 @@ export default function VillaSlider() {
             ref={containerRef}
             onMouseMove={(e) => {
               const r = e.currentTarget.getBoundingClientRect();
-              setHoverSide(e.clientX - r.left < r.width / 2 ? "left" : "right");
+              if (isMobile) {
+                setHoverSide(e.clientY - r.top < r.height / 2 ? "left" : "right");
+              } else {
+                setHoverSide(e.clientX - r.left < r.width / 2 ? "left" : "right");
+              }
             }}
             onMouseLeave={() => setHoverSide(null)}
             style={{
               cursor: hoverSide === "left"
-                ? "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M22 8L12 18L22 28' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") 18 18, w-resize"
+                ? isMobile
+                  ? "n-resize"
+                  : "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M22 8L12 18L22 28' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") 18 18, w-resize"
                 : hoverSide === "right"
-                ? "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M14 8L24 18L14 28' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") 18 18, e-resize"
+                ? isMobile
+                  ? "s-resize"
+                  : "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M14 8L24 18L14 28' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") 18 18, e-resize"
                 : "default"
             }}
           >
@@ -276,9 +335,15 @@ export default function VillaSlider() {
                 zIndex: 2,
                 ...(transitioning
                   ? {
-                      clipPath: waveClip,
-                      WebkitClipPath: waveClip,
-                      transform: `translateX(${slideOutX}px)`,
+                      ...(isMobile
+                        ? {}
+                        : {
+                            clipPath: waveClip,
+                            WebkitClipPath: waveClip,
+                          }),
+                      transform: isMobile
+                        ? `translateY(${slideOutY}px)`
+                        : `translateX(${slideOutX}px)`,
                       willChange: "transform",
                     }
                   : {

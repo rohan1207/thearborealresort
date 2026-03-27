@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const collections = [
   {
@@ -41,16 +41,31 @@ const collections = [
 
 export default function Activities() {
   const [hovered, setHovered] = useState(null);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 640 : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
     <section
       style={{
         background: "#f5f3ed",
         width: "100%",
-        height: "100vh",
+        height: isMobile ? "auto" : "100vh",
         display: "flex",
         flexDirection: "column",
-        padding: "48px 52px 44px",
+        padding: isMobile ? "32px 16px 28px" : "48px 52px 44px",
         fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
         boxSizing: "border-box",
         overflow: "hidden",
@@ -94,37 +109,14 @@ export default function Activities() {
           </h2>
         </div>
 
-        <a
-          href="#"
-          style={{
-            fontSize: 11,
-            letterSpacing: "0.26em",
-            textTransform: "uppercase",
-            color: "#1a1a1a",
-            fontFamily: "system-ui, sans-serif",
-            fontWeight: 500,
-            textDecoration: "none",
-            borderBottom: "0.5px solid #1a1a1a",
-            paddingBottom: 2,
-            cursor: "pointer",
-            opacity: 0.6,
-            transition: "opacity 0.2s ease",
-            position: "absolute",
-            right: 52,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = 1)}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.6)}
-        >
-          View all
-        </a>
       </div>
 
       {/* ── Bento Grid ── */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gridTemplateRows: "repeat(2, 1fr)",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gridTemplateRows: isMobile ? "auto" : "repeat(2, 1fr)",
           gap: 10,
           flex: 1,
           minHeight: 0,
@@ -135,7 +127,11 @@ export default function Activities() {
           item={collections[0]}
           hovered={hovered}
           setHovered={setHovered}
-          style={{ gridColumn: "span 2", gridRow: "span 2" }}
+          style={{
+            gridColumn: isMobile ? "span 2" : "span 2",
+            gridRow: isMobile ? "span 1" : "span 2",
+            minHeight: isMobile ? 300 : undefined,
+          }}
         />
 
         {/* Card 2 — small, 1×1 */}
@@ -143,7 +139,11 @@ export default function Activities() {
           item={collections[1]}
           hovered={hovered}
           setHovered={setHovered}
-          style={{ gridColumn: "span 1", gridRow: "span 1" }}
+          style={{
+            gridColumn: "span 1",
+            gridRow: "span 1",
+            minHeight: isMobile ? 190 : undefined,
+          }}
         />
 
         {/* Card 3 — small, 1×1 */}
@@ -151,7 +151,11 @@ export default function Activities() {
           item={collections[2]}
           hovered={hovered}
           setHovered={setHovered}
-          style={{ gridColumn: "span 1", gridRow: "span 1" }}
+          style={{
+            gridColumn: "span 1",
+            gridRow: "span 1",
+            minHeight: isMobile ? 190 : undefined,
+          }}
         />
 
         {/* Card 4 — wide, 2×1 */}
@@ -159,7 +163,11 @@ export default function Activities() {
           item={collections[3]}
           hovered={hovered}
           setHovered={setHovered}
-          style={{ gridColumn: "span 2", gridRow: "span 1" }}
+          style={{
+            gridColumn: "span 2",
+            gridRow: "span 1",
+            minHeight: isMobile ? 220 : undefined,
+          }}
         />
       </div>
     </section>
