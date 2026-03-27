@@ -58,19 +58,19 @@ const Footer = () => {
                 className="h-12 sm:h-14 md:h-16 lg:h-16 w-auto drop-shadow-sm transition-all duration-500 group-hover:scale-105 mx-auto"
               />
             </Link>
-            <p className="text-gray-600 font-light text-xs sm:text-sm leading-relaxed max-w-xs mx-auto px-4">
+            <p className="text-[#6B6B6B] font-normal text-xs sm:text-sm leading-relaxed max-w-xs mx-auto px-4">
               Escape to tranquility. Experience luxury amidst nature at Arboreal
               Resort, where every moment is a celebration of serenity and
               elegance.
             </p>
 
             {/* Social Media */}
-            <div className="flex items-center gap-2.5 justify-center">
+            <div className="flex items-center gap-2.5 justify-center text-[#1a1a1a]">
               <a
                 href="https://www.facebook.com/people/The-Arboreal-Resort/100083284368649/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-900 transition-all duration-300 shadow-sm hover:shadow-md"
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-full flex items-center justify-center text-[#6B6B6B] hover:text-white hover:bg-[#1a1a1a] transition-all duration-300 shadow-sm hover:shadow-md"
               >
                 <FiFacebook className="w-4 h-4" />
               </a>
@@ -78,7 +78,7 @@ const Footer = () => {
                 href="https://www.instagram.com/arborealresort/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-900 transition-all duration-300 shadow-sm hover:shadow-md"
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-full flex items-center justify-center text-[#6B6B6B] hover:text-white hover:bg-[#1a1a1a] transition-all duration-300 shadow-sm hover:shadow-md"
               >
                 <FiInstagram className="w-4 h-4" />
               </a>
@@ -86,7 +86,7 @@ const Footer = () => {
                 href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-900 transition-all duration-300 shadow-sm hover:shadow-md"
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-full flex items-center justify-center text-[#6B6B6B] hover:text-white hover:bg-[#1a1a1a] transition-all duration-300 shadow-sm hover:shadow-md"
               >
                 <FiTwitter className="w-4 h-4" />
               </a> */}
@@ -112,7 +112,7 @@ const Footer = () => {
               transition={{ delay: 0.1 }}
               className="space-y-3"
             >
-              <h3 className="text-[10px] sm:text-xs font-medium tracking-[0.2em] uppercase text-gray-800 text-left">
+              <h3 className="text-[10px] sm:text-xs font-normal tracking-[0.2em] uppercase text-[#6B6B6B] text-left">
                 Quick Links
               </h3>
               <ul className="space-y-2.5 text-left">
@@ -120,7 +120,7 @@ const Footer = () => {
                   <li key={link.name}>
                     <Link
                       to={link.path}
-                      className="text-gray-600 hover:text-gray-900 transition-colors duration-300 font-light text-xs sm:text-sm block"
+                      className="text-[#1a1a1a] hover:text-[#2a2a2a] transition-colors duration-300 font-normal text-xs sm:text-sm block"
                     >
                       {link.name}
                     </Link>
@@ -138,7 +138,7 @@ const Footer = () => {
               transition={{ delay: 0.2 }}
               className="space-y-3"
             >
-              <h3 className="text-[10px] sm:text-xs font-medium tracking-[0.2em] uppercase text-gray-800 text-left">
+              <h3 className="text-[10px] sm:text-xs font-normal tracking-[0.2em] uppercase text-[#6B6B6B] text-left">
                 Explore
               </h3>
               <ul className="space-y-2.5 text-left">
@@ -146,7 +146,7 @@ const Footer = () => {
                   <li key={link.name}>
                     <Link
                       to={link.path}
-                      className="text-gray-600 hover:text-gray-900 transition-colors duration-300 font-light text-xs sm:text-sm block"
+                      className="text-[#1a1a1a] hover:text-[#2a2a2a] transition-colors duration-300 font-normal text-xs sm:text-sm block"
                     >
                       {link.name}
                     </Link>
@@ -164,15 +164,15 @@ const Footer = () => {
               transition={{ delay: 0.25 }}
               className="space-y-3"
             >
-              <h3 className="text-[10px] sm:text-xs font-medium tracking-[0.2em] uppercase text-gray-800 text-left">
+              <h3 className="text-[10px] sm:text-xs font-normal tracking-[0.2em] uppercase text-[#6B6B6B] text-left">
                 Contact
               </h3>
-              <div className="flex flex-col items-start text-left gap-3">
+              <div className="flex flex-col items-start text-left gap-3 text-[#1a1a1a]">
                 <a
                   href="https://maps.app.goo.gl/2EL8NXUZgh4An2NL8"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-start gap-2 text-gray-700 hover:text-gray-900 text-xs sm:text-sm font-light"
+                  className="inline-flex items-start gap-2 text-[#1a1a1a] hover:text-[#2a2a2a] text-xs sm:text-sm font-normal"
                 >
                   <FiMapPin className="w-4 h-4" />
                   <span className="max-w-xs">
@@ -180,17 +180,17 @@ const Footer = () => {
                   </span>
                 </a>
                 <div className="flex flex-col items-start gap-1">
-                  <a href="tel:+918065423948‬" className="inline-flex items-start gap-2 text-gray-700 hover:text-gray-900 text-xs sm:text-sm font-light">
+                  <a href="tel:+918065423948‬" className="inline-flex items-start gap-2 text-[#1a1a1a] hover:text-[#2a2a2a] text-xs sm:text-sm font-normal">
                     <FiPhone className="w-4 h-4" />
                     +91 8065423948‬  *(+91 is essential)
                   </a>
                  
                 </div>
-                <a href="mailto:reservations@thearborealresort.com" className="inline-flex items-start gap-2 text-gray-700 hover:text-gray-900 text-xs sm:text-sm font-light">
+                <a href="mailto:reservations@thearborealresort.com" className="inline-flex items-start gap-2 text-[#1a1a1a] hover:text-[#2a2a2a] text-xs sm:text-sm font-normal">
                   <FiMail className="w-4 h-4" />
                   reservations@thearborealresort.com
                 </a>
-                <p className="text-[10px] text-gray-500">24/7 Reception</p>
+                <p className="text-[10px] text-[#6B6B6B] font-normal">24/7 Reception</p>
               </div>
             </motion.div>
           </div>
@@ -208,7 +208,7 @@ const Footer = () => {
           className="pt-6 sm:pt-7 md:pt-8 border-t border-gray-200"
         >
           <div className="flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
-            <p className="text-xs text-gray-500 font-light text-center md:text-left">
+            <p className="text-xs text-[#6B6B6B] font-normal text-center md:text-left">
               © {new Date().getFullYear()} Arboreal Resort. All rights reserved.
               Crafted with love.
             </p>

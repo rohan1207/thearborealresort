@@ -24,10 +24,10 @@ const LocationMap = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8 md:mb-12">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif text-gray-900 mb-3 sm:mb-4 px-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal text-[#1a1a1a] mb-3 sm:mb-4 px-4">
             {locationDetails.title}
           </h2>
-          <p className="text-sm md:text-base text-gray-600 font-light tracking-wide px-4">
+          <p className="text-sm md:text-base text-[#6B6B6B] font-normal tracking-wide px-4">
             {locationDetails.address}
           </p>
         </div>
@@ -55,9 +55,9 @@ const LocationMap = () => {
             href={locationDetails.mapLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative px-6 sm:px-8 py-3 sm:py-4 overflow-hidden bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-full shadow-lg hover:shadow-xl"
+            className="group relative px-6 sm:px-8 py-3 sm:py-4 overflow-hidden bg-[#1a1a1a] text-white hover:bg-[#000000] transition-all duration-300 rounded-full shadow-lg hover:shadow-xl"
           >
-            <span className="relative z-10 text-xs sm:text-sm tracking-[0.15em] uppercase font-light flex items-center gap-2 sm:gap-3">
+            <span className="relative z-10 text-xs sm:text-sm tracking-[0.18em] uppercase font-medium flex items-center gap-2 sm:gap-3">
               <svg
                 className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
@@ -101,8 +101,8 @@ const LocationMap = () => {
                 />
               </svg>
             </div>
-            <h3 className="text-base sm:text-lg font-serif text-gray-900">From Mumbai</h3>
-            <p className="text-sm text-gray-600 font-light px-4">
+            <h3 className="text-base sm:text-lg font-normal text-[#1a1a1a]">From Mumbai</h3>
+            <p className="text-sm text-[#6B6B6B] font-normal px-4">
             2½ hours via Mumbai–Pune Expressway
             </p>
           </div>
@@ -124,10 +124,10 @@ const LocationMap = () => {
                 />
               </svg>
             </div>
-            <h3 className="text-base sm:text-lg font-serif text-gray-900">
+            <h3 className="text-base sm:text-lg font-normal text-[#1a1a1a]">
               Nearest Airport
             </h3>
-            <p className="text-sm text-gray-600 font-light px-4">
+            <p className="text-sm text-[#6B6B6B] font-normal px-4">
             Mumbai 3 Hours / Pune 2 Hours
             </p>
           </div>
@@ -149,10 +149,10 @@ const LocationMap = () => {
                 />
               </svg>
             </div>
-            <h3 className="text-base sm:text-lg font-serif text-gray-900">
+            <h3 className="text-base sm:text-lg font-normal text-[#1a1a1a]">
               Railway Station
             </h3>
-            <p className="text-sm text-gray-600 font-light px-4">
+            <p className="text-sm text-[#6B6B6B] font-normal px-4">
               Lonavala Station 
             </p>
           </div>

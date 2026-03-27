@@ -208,10 +208,12 @@ const ImageSlider = () => {
   return (
     <div className="relative w-full bg-[#f5f3ed] py-8 sm:py-12">
       {/* Text Content */}
-      <div className="max-w-3xl text-gray-700 mx-auto px-4 sm:px-8 mb-8 sm:mb-12 text-center">
-        <h4>LONAVALA</h4>
-        <h2 className="text-2xl text-gray-700 mb-4">The Arboreal Resort</h2>
-        <p className="text-gray-700 leading-relaxed text-center">
+      <div className="max-w-3xl mx-auto px-4 sm:px-8 mb-8 sm:mb-12 text-center">
+        <h4 className="text-xs sm:text-sm tracking-[0.3em] uppercase text-[#6B6B6B] font-normal mb-2 sm:mb-3">
+          LONAVALA
+        </h4>
+        <h2 className="text-2xl sm:text-3xl text-[#1a1a1a] font-normal mb-4">The Arboreal Resort</h2>
+        <p className="text-[#6B6B6B] font-normal leading-relaxed text-center text-sm sm:text-base">
         Tucked away in the untouched forests of the Western Ghats, The Arboreal Resort is an eco-luxury retreat overlooking the serene Pawna Lake. From its elevated, treehouse-inspired setting, the resort offers sweeping valley views, handcrafted wooden interiors, and quiet spaces designed for calm and connection. With forest trails, hidden waterfalls and curated nature experiences, Arboreal invites you to slow down, immerse yourself in the wilderness, and rediscover the beauty of being close to nature.
         </p>
       </div>
@@ -294,7 +296,7 @@ const ImageSlider = () => {
       <div className="mt-6 flex justify-center">
         <Link
           to="/gallery"
-          className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-xs font-medium uppercase tracking-[0.25em] text-white shadow-sm hover:bg-black hover:shadow-md transition-all duration-300"
+          className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-5 py-2.5 text-xs font-medium uppercase tracking-[0.18em] text-white shadow-sm hover:bg-[#000000] hover:shadow-md transition-all duration-300"
         >
           See More
         </Link>

@@ -108,10 +108,10 @@ const RoomShowcase = memo(() => {
 
         {/* Header */}
         <div className="text-center mb-10">
-          <p className="font-serif italic text-gray-600 text-lg">
+          <p className="text-xs sm:text-sm tracking-[0.3em] uppercase text-[#6B6B6B] font-normal mb-2 sm:mb-3">
             Accommodations
           </p>
-          <h2 className="text-3xl font-serif text-gray-900">
+          <h2 className="text-3xl sm:text-4xl text-[#1a1a1a] font-normal">
             Raising Comfort To The Highest Level
           </h2>
         </div>
@@ -182,7 +182,7 @@ const RoomShowcase = memo(() => {
         {/* Title */}
         <div className="text-center mt-6 cursor-pointer">
           <h3
-            className="text-2xl sm:text-3xl font-serif text-gray-900"
+            className="text-2xl sm:text-3xl font-normal text-[#1a1a1a]"
             onClick={() =>
               handleRoomNameClick(
                 rooms[centerCardIndex].title,

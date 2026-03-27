@@ -34,7 +34,7 @@ function buildWaveClip(direction, W, H) {
 }
 
 const DURATION = 800;
-const AUTO_INTERVAL = 3000;
+const AUTO_INTERVAL = 2000;
 const DRIFT_PX = 28;
 
 export default function VillaSlider() {
@@ -167,7 +167,6 @@ export default function VillaSlider() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Cormorant:wght@300;400&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
         .v-root{
           background:#f4f1eb;min-height:100vh;
@@ -227,14 +226,14 @@ export default function VillaSlider() {
         .v-room-name{
           margin-top:16px;
           font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
-          font-weight:500;
+          font-weight:400;
           font-size:clamp(18px,2vw,24px);
           letter-spacing:0.03em;
           color:#1a1a1a;
           text-transform:none;
         }
         .v-caption{
-          margin-top:18px;font-family:'Cormorant Garamond',Georgia,serif;
+          margin-top:18px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
           font-style:normal;font-weight:400;font-size:clamp(13px,1.2vw,15px);
           letter-spacing:0.08em;color:#6B6B6B;
         }
@@ -277,7 +276,7 @@ export default function VillaSlider() {
       `}</style>
 
       <div className="v-root">
-        <h2 className="text-3xl font-light text-stone-900 leading-tight">Accommodations</h2>
+        <h2 className="text-3xl font-normal text-[#1a1a1a] leading-tight">Accommodations</h2>
         <div className="v-ornament">{[0,1,2,3].map(i=><span key={i}/>)}</div>
 
         <div className="v-wrap">
