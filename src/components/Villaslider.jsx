@@ -33,8 +33,8 @@ function buildWaveClip(direction, W, H) {
   }
 }
 
-const DURATION = 1000;
-const AUTO_INTERVAL = 4500;
+const DURATION = 800;
+const AUTO_INTERVAL = 3000;
 const DRIFT_PX = 28;
 
 export default function VillaSlider() {
@@ -183,19 +183,19 @@ export default function VillaSlider() {
         .v-ornament span{width:4px;height:4px;border-radius:50%;background:#b5a98a;opacity:0.65;}
         .v-wrap{position:relative;width:min(68vw,920px);isolation:isolate;}
         .v-peek{
-          position:absolute;top:0;height:100%;width:80px;overflow:hidden;z-index:0;
+          position:absolute;top:0;height:100%;width:170px;overflow:hidden;z-index:0;
         }
-        .v-peek-left{right:100%;border-radius:3px 0 0 3px;}
-        .v-peek-right{left:100%;border-radius:0 3px 3px 0;}
+        .v-peek-left{right:calc(100% - 95px);border-radius:3px 0 0 3px;}
+        .v-peek-right{left:calc(100% - 95px);border-radius:0 3px 3px 0;}
         .v-peek img{
           position:absolute;top:0;height:100%;
-          width:calc(min(68vw,920px) + 80px);max-width:none;
+          width:calc(min(68vw,920px) + 170px);max-width:none;
           object-fit:cover;pointer-events:none;user-select:none;
         }
         .v-peek-left img{right:0;object-position:right center;}
         .v-peek-right img{left:0;object-position:left center;}
         .v-stage{
-          position:relative;width:100%;aspect-ratio:16/7.2;overflow:hidden;z-index:10;
+          position:relative;width:100%;aspect-ratio:16/8.8;overflow:visible;z-index:30;
         }
         .v-img{
           position:absolute;inset:0;width:100%;height:100%;
@@ -251,6 +251,7 @@ export default function VillaSlider() {
           }
           .v-stage{
             aspect-ratio:3/4;
+            overflow:hidden;
           }
           .v-zone{
             width:100%;
