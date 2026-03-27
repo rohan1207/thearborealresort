@@ -1,0 +1,6 @@
+# https://thearborealresort.com/robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://thearborealresort.com/sitemap.xml

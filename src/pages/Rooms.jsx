@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import roomsData from "../Data/roomsdata.json";
+import { Helmet } from "react-helmet-async";
+import { apiFetch } from "../utils/api";
+import { useGlobalSEO } from "../hooks/useGlobalSEO";
+import { RoomSkeleton } from "../components/SkeletonLoader";
 import { 
   FiCoffee,
   FiSun,
@@ -40,6 +43,9 @@ import {
 const Rooms = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [originalRoomTab, setOriginalRoomTab] = useState(null);
@@ -51,7 +57,28 @@ const Rooms = () => {
     selectedRoomSlug,
   } = location.state || {};
 
-  const rooms = roomsData.ResortRooms;
+  // Fetch rooms from backend on mount
+  useEffect(() => {
+    const loadRooms = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await apiFetch("/rooms");
+        if (data?.success && Array.isArray(data.rooms) && data.rooms.length > 0) {
+          setRooms(data.rooms);
+        } else {
+          setRooms([]);
+        }
+      } catch (err) {
+        console.error("Failed to load rooms from backend:", err);
+        setError(err);
+        setRooms([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadRooms();
+  }, []);
 
   const slugify = (value = "") =>
     value
@@ -61,9 +88,17 @@ const Rooms = () => {
 
   const parseImages = (imageData) => {
     if (Array.isArray(imageData)) {
-      return imageData.flatMap((img) =>
-        typeof img === "string" ? img.split(",").map((i) => i.trim()) : img
-      );
+      return imageData.flatMap((img) => {
+        if (typeof img === "string") {
+          // If it's a full URL (e.g., Cloudinary), return as-is
+          if (img.startsWith("http://") || img.startsWith("https://")) {
+            return img;
+          }
+          // Otherwise support comma-separated filenames from JSON
+          return img.split(",").map((i) => i.trim());
+        }
+        return img;
+      });
     }
     return [];
   };
@@ -109,9 +144,6 @@ const Rooms = () => {
     return <FiGrid className="w-5 h-5" />;
   };
 
-  const currentRoom = rooms[activeTab];
-  const images = parseImages(currentRoom.image);
-
   useEffect(() => {
     if (backendRoom && backendRoom.Room_Name) {
       const roomName = backendRoom.Room_Name.toLowerCase();
@@ -130,11 +162,30 @@ const Rooms = () => {
       (selectedRoomName ? slugify(selectedRoomName) : null);
 
     if (targetSlug) {
+      const normalizeSlug = (value = "") =>
+        slugify(value).replace(/-room(s)?$/, "");
+
+      const normalizedTarget = normalizeSlug(targetSlug);
+
       const tabIndex = rooms.findIndex((r) => {
-        const roomSlug = r.slug || slugify(r.name);
-        if (roomSlug === targetSlug) return true;
+        const roomSlug = normalizeSlug(r.slug || slugify(r.name));
+        const roomNameSlug = normalizeSlug(r.name || "");
+
+        // Exact match first
+        if (roomSlug === normalizedTarget || roomNameSlug === normalizedTarget) return true;
+
+        // Tolerant match for slight slug variations
+        if (
+          roomSlug.includes(normalizedTarget) ||
+          normalizedTarget.includes(roomSlug) ||
+          roomNameSlug.includes(normalizedTarget) ||
+          normalizedTarget.includes(roomNameSlug)
+        ) {
+          return true;
+        }
+
         if (selectedRoomName) {
-          return r.name.toLowerCase() === selectedRoomName.toLowerCase();
+          return normalizeSlug(r.name || "") === normalizeSlug(selectedRoomName);
         }
         return false;
       });
@@ -147,6 +198,77 @@ const Rooms = () => {
   useEffect(() => {
     setCurrentImageIndex(0);
   }, [activeTab]);
+
+  // SEO Settings - Define early so they're always available (BEFORE early returns)
+  const { seoSettings } = useGlobalSEO();
+  const siteUrl = seoSettings?.siteUrl || window.location.origin;
+  const ogImage = seoSettings?.defaultOgImage || `${siteUrl}/slider5.webp`;
+  
+  // Get current room for SEO (with safe fallbacks)
+  const currentRoom = rooms.length > 0 ? (rooms[activeTab] || rooms[0]) : null;
+  
+  // Room-specific SEO (from backend) with fallbacks - always defined
+  const roomMetaTitle = currentRoom?.metaTitle 
+    ? `${currentRoom.metaTitle} | ${seoSettings?.siteName || 'The Arboreal Resort'}`
+    : currentRoom?.name
+    ? `The ${currentRoom.name} | ${seoSettings?.siteName || 'The Arboreal Resort'}`
+    : `Rooms | ${seoSettings?.siteName || 'The Arboreal Resort'}`;
+  const roomMetaDescription = currentRoom?.metaDescription 
+    || currentRoom?.description?.substring(0, 160)
+    || `Experience luxury in our rooms at ${seoSettings?.siteName || 'The Arboreal Resort'}, Lonavala.`;
+  const roomOgImage = (currentRoom?.images && currentRoom.images.length > 0 && currentRoom.images[0]) 
+    ? currentRoom.images[0] 
+    : ogImage;
+  const roomCanonicalUrl = currentRoom?.canonicalUrl 
+    || `${siteUrl}/rooms${currentRoom?.slug ? `/${currentRoom.slug}` : ''}`;
+
+  // Guard: show loading / empty state before we try to read currentRoom/images
+  if (loading) {
+    return (
+      <>
+        <Helmet>
+          <title>{roomMetaTitle}</title>
+          <meta name="description" content={roomMetaDescription} />
+        </Helmet>
+        <RoomSkeleton />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Helmet>
+          <title>{roomMetaTitle}</title>
+          <meta name="description" content={roomMetaDescription} />
+        </Helmet>
+        <ErrorDisplay 
+          error={error} 
+          onRetry={() => window.location.reload()} 
+          title="Failed to load rooms"
+        />
+      </>
+    );
+  }
+
+  if (!loading && rooms.length === 0) {
+    return (
+      <>
+        <Helmet>
+          <title>{roomMetaTitle}</title>
+          <meta name="description" content={roomMetaDescription} />
+        </Helmet>
+        <div className="min-h-screen bg-[#f8f6f0] pt-16 sm:pt-18 md:pt-20 flex items-center justify-center">
+          <div className="text-center text-gray-600">
+            <p className="text-lg font-medium">No rooms available</p>
+            <p className="text-sm mt-1">Please check if the backend /api/rooms endpoint is returning data.</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const images = currentRoom ? parseImages(currentRoom.image || currentRoom.images || []) : [];
 
   const goToPrevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
@@ -201,7 +323,29 @@ const Rooms = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f6f0] pt-16 sm:pt-18 md:pt-20">
+    <>
+      <Helmet>
+        <title>{roomMetaTitle}</title>
+        <meta name="description" content={roomMetaDescription} />
+        {currentRoom?.seoKeywords && currentRoom.seoKeywords.length > 0 && (
+          <meta name="keywords" content={currentRoom.seoKeywords.join(', ')} />
+        )}
+        <link rel="canonical" href={roomCanonicalUrl} />
+        
+        {/* Open Graph */}
+        <meta property="og:title" content={roomMetaTitle} />
+        <meta property="og:description" content={roomMetaDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={roomCanonicalUrl} />
+        <meta property="og:image" content={roomOgImage} />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={roomMetaTitle} />
+        <meta name="twitter:description" content={roomMetaDescription} />
+        <meta name="twitter:image" content={roomOgImage} />
+      </Helmet>
+      <div className="min-h-screen bg-[#f8f6f0] pt-16 sm:pt-18 md:pt-20">
       {/* Header Section */}
       <div className="border-b">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8">
@@ -269,10 +413,10 @@ const Rooms = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             {/* Availability Notice Banner */}
             {backendRoom && !isCurrentRoomAvailable() && (
@@ -309,16 +453,16 @@ const Rooms = () => {
             )}
 
             {/* Large Hero Image with Navigation */}
-            <div className="relative w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px] overflow-hidden rounded-lg">
+            <div className="relative w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px] overflow-hidden rounded-lg bg-[#f8f6f0]">
               <AnimatePresence mode="wait">
                 <motion.img
                   key={currentImageIndex}
-                  src={`/${images[currentImageIndex]}`}
+                  src={images[currentImageIndex]}
                   alt={`${currentRoom.name}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="w-full h-full object-cover"
                 />
               </AnimatePresence>
@@ -326,11 +470,11 @@ const Rooms = () => {
               {/* Navigation Arrows */}
               <button
                 onClick={goToPrevImage}
-                className="absolute left-2 sm:left-4 md:left-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/80 hover:bg-white rounded-full flex items-center justify-center transition-all duration-300 shadow-lg z-10"
+                className="absolute left-2 sm:left-4 md:left-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gray-900/60 hover:bg-gray-900/80 backdrop-blur-sm border border-gray-800/30 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg z-10"
                 aria-label="Previous image"
               >
                 <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-800"
+                  className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -345,11 +489,11 @@ const Rooms = () => {
               </button>
               <button
                 onClick={goToNextImage}
-                className="absolute right-2 sm:right-4 md:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/80 hover:bg-white rounded-full flex items-center justify-center transition-all duration-300 shadow-lg z-10"
+                className="absolute right-2 sm:right-4 md:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gray-900/60 hover:bg-gray-900/80 backdrop-blur-sm border border-gray-800/30 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg z-10"
                 aria-label="Next image"
               >
                 <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-800"
+                  className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -394,7 +538,7 @@ const Rooms = () => {
               </p>
             </div>
 
-            <div className="bg-white shadow-sm rounded-lg">
+            <div className="bg-transparent border border-gray-200 shadow-sm rounded-lg">
               {/* Your Stays Include Section */}
               {currentRoom.your_stays_include && currentRoom.your_stays_include.length > 0 && (
                 <div className="px-4 sm:px-6 md:px-8 lg:px-16 py-6 sm:py-8 border-b border-gray-200">
@@ -404,7 +548,7 @@ const Rooms = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     {currentRoom.your_stays_include.map((item, index) => (
                       <div key={index} className="flex flex-col items-center text-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
+                        <div className="w-12 h-12 rounded-full border border-gray-300 bg-transparent flex items-center justify-center text-gray-700">
                           {getAmenityIcon(item)}
                         </div>
                         <span className="text-xs text-gray-700 leading-tight">{item}</span>
@@ -423,7 +567,7 @@ const Rooms = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     {(currentRoom.amenities || currentRoom[' amenities']).map((item, index) => (
                       <div key={index} className="flex flex-col items-center text-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
+                        <div className="w-12 h-12 rounded-full border border-gray-300 bg-transparent flex items-center justify-center text-gray-700">
                           {getAmenityIcon(typeof item === 'string' ? item : item.label)}
                         </div>
                         <span className="text-xs text-gray-700 leading-tight">
@@ -448,7 +592,7 @@ const Rooms = () => {
                           key={index}
                           className="flex flex-col items-center text-center gap-3"
                         >
-                          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
+                          <div className="w-12 h-12 rounded-full border border-gray-300 bg-transparent flex items-center justify-center text-gray-700">
                             {getAmenityIcon(item)}
                           </div>
                           <span className="text-xs text-gray-700 leading-tight">
@@ -503,7 +647,8 @@ const Rooms = () => {
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -1,5 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { Helmet } from "react-helmet-async";
+import { useGlobalSEO } from "../hooks/useGlobalSEO";
 
 const services = [
   {
@@ -86,8 +88,32 @@ const cardVariants = {
 };
 
 const Services = () => {
+  const { seoSettings } = useGlobalSEO();
+  const siteUrl = seoSettings?.siteUrl || window.location.origin;
+  const ogImage = seoSettings?.defaultOgImage || `${siteUrl}/slider5.webp`;
+  const pageTitle = `Services | ${seoSettings?.siteName || 'The Arboreal Resort'}`;
+  const pageDescription = `Discover our comprehensive event services at ${seoSettings?.siteName || 'The Arboreal Resort'}. From weddings and corporate events to private dining and celebrations.`;
+
   return (
-    <div className="overflow-x-hidden bg-white">
+    <>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        {seoSettings?.defaultKeywords && seoSettings.defaultKeywords.length > 0 && (
+          <meta name="keywords" content={[...seoSettings.defaultKeywords, 'services', 'events', 'weddings', 'corporate events'].join(', ')} />
+        )}
+        <link rel="canonical" href={`${siteUrl}/services`} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${siteUrl}/services`} />
+        <meta property="og:image" content={ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
+      <div className="overflow-x-hidden bg-white">
       {/* Hero Section */}
       <section className="relative h-screen flex items-center overflow-hidden">
         {/* Background Image */}
@@ -158,6 +184,7 @@ const Services = () => {
                   src={service.imageUrl}
                   alt={service.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center text-center p-3 sm:p-4 md:p-8">
                   <h3 className="text-sm sm:text-lg md:text-3xl font-medium text-white mb-2 sm:mb-3 tracking-wide leading-tight">
@@ -178,6 +205,7 @@ const Services = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

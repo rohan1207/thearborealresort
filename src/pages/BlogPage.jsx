@@ -1,22 +1,50 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import blogsData from "../Data/blogsdata.json";
+import { Helmet } from "react-helmet-async";
+import { useGlobalSEO } from "../hooks/useGlobalSEO";
+import { BlogSkeleton } from "../components/SkeletonLoader";
+import { ErrorDisplay } from "../components/ErrorDisplay";
+import { apiFetch } from "../utils/api";
+
+// Helper to strip HTML tags for excerpts
+const stripHtml = (html) => {
+  if (!html) return '';
+  const tmp = document.createElement('DIV');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+};
 
 const BlogPage = () => {
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAll, setShowAll] = useState(false);
+  const { seoSettings } = useGlobalSEO();
 
-  const slugify = (s) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
 
-  const excerpt = (text, n = 40) => {
-    const clean = (text || "").replace(/\n+/g, " ").trim();
-    const words = clean.split(/\s+/);
-    const cut = words.slice(0, n).join(" ");
-    return words.length > n ? `${cut}…` : cut;
+  const fetchBlogs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiFetch('/blogs?limit=20');
+      if (data.success) {
+        setBlogs(data.blogs || []);
+      } else {
+        throw new Error(data.message || 'Failed to load blogs');
+      }
+    } catch (err) {
+      console.error('Error fetching blogs:', err);
+      setError({
+        message: err.message || 'Failed to load blogs',
+        isNetworkError: err.isNetworkError || false
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (iso) => {
@@ -32,23 +60,6 @@ const BlogPage = () => {
       return "";
     }
   };
-
-  const readingTime = (text) => {
-    const words = (text || "").trim().split(/\s+/).filter(Boolean).length;
-    const mins = Math.max(1, Math.ceil(words / 200));
-    return `${mins} min read`;
-  };
-
-  const blogs = (blogsData || []).map((b, i) => ({
-    id: i + 1,
-    category: (b.author || "Story").toUpperCase(),
-    title: b.title,
-    description: excerpt(b.content, 36),
-    image: b.coverImage,
-    date: formatDate(b.createdAt),
-    readTime: readingTime(b.content),
-    link: `/blog/${slugify(b.title)}`,
-  }));
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -72,180 +83,180 @@ const BlogPage = () => {
     },
   };
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "The Arboreal Journal",
+    "description": "Discover travel tips, wellness insights, and the stories behind our sanctuary in the hills of Lonavala.",
+    "url": `${window.location.origin}/blog`,
+    "blogPost": blogs.map(blog => ({
+      "@type": "BlogPosting",
+      "headline": blog.title,
+      "description": blog.excerpt || blog.metaDescription,
+      "image": blog.coverImage,
+      "datePublished": blog.createdAt,
+      "author": {
+        "@type": "Organization",
+        "name": blog.author || "The Arboreal Resort"
+      }
+    }))
+  };
+
+  if (loading) {
+    return <BlogSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <ErrorDisplay
+        message={error.message}
+        isNetworkError={error.isNetworkError}
+        onRetry={fetchBlogs}
+      />
+    );
+  }
+
+  const siteUrl = seoSettings?.siteUrl || window.location.origin;
+  const ogImage = seoSettings?.defaultOgImage || `${siteUrl}/slider5.webp`;
+  const blogPageTitle = `Blog & Stories | ${seoSettings?.siteName || 'The Arboreal Resort, Lonavala'}`;
+  const blogPageDescription = seoSettings?.defaultMetaDescription
+    ? `${seoSettings.defaultMetaDescription} Read our latest blog posts about nature, luxury, and mindful living.`
+    : "Discover travel tips, wellness insights, and the stories behind The Arboreal Resort in the hills of Lonavala. Read our latest blog posts about nature, luxury, and mindful living.";
+  const blogPageKeywords = seoSettings?.defaultKeywords && seoSettings.defaultKeywords.length > 0
+    ? [...seoSettings.defaultKeywords, 'blog', 'stories', 'travel tips', 'wellness'].join(', ')
+    : "Lonavala resort blog, nature retreat stories, luxury resort blog, travel tips Lonavala, wellness blog, forest resort experiences, The Arboreal Resort blog";
+
+  const visibleBlogs = showAll ? blogs : blogs.slice(0, 5);
+
   return (
-    <div className="bg-[#f5f3ed]">
-      {/* Hero Section */}
-      <motion.section
-        className="relative h-[50vh] sm:h-[55vh] md:h-[65vh] lg:h-[70vh] bg-cover bg-center flex items-center justify-center text-white overflow-hidden"
-        style={{
-          backgroundImage: "url('/slider5.webp')",
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/60"></div>
-        <div className="relative text-center px-4 sm:px-6 max-w-4xl mx-auto">
-          <motion.p
-            className="text-[10px] sm:text-xs md:text-sm tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] uppercase text-white/90 mb-3 sm:mb-4"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            Stories & Insights
-          </motion.p>
-          <motion.h1
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-light mb-4 sm:mb-5 md:mb-6 px-2"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-          >
-            The Arboreal Journal
-          </motion.h1>
-          <motion.p
-            className="text-xs sm:text-sm md:text-base lg:text-lg font-light leading-relaxed max-w-2xl mx-auto px-2"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            Discover travel tips, wellness insights, and the stories behind our
-            sanctuary in the hills of Lonavala.
-          </motion.p>
-        </div>
-      </motion.section>
+    <>
+      <Helmet>
+        <title>{blogPageTitle}</title>
+        <meta name="description" content={blogPageDescription} />
+        <meta name="keywords" content={blogPageKeywords} />
+        <meta property="og:title" content={blogPageTitle} />
+        <meta property="og:description" content={blogPageDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:url" content={`${siteUrl}/blog`} />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={blogPageTitle} />
+        <meta name="twitter:description" content={blogPageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+        <link rel="canonical" href={`${siteUrl}/blog`} />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
 
-      {/* Bento Grid Blog Section */}
-      <section className="py-10 sm:py-12 md:py-16 lg:py-20 xl:py-24 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 lg:gap-8"
-          >
-            {/* Display first 4 blogs or all blogs based on showAll state */}
-            {(showAll ? blogs : blogs.slice(0, 5)).map((blog, index) => (
-              <motion.article
-                key={blog.id}
-                variants={itemVariants}
-                className={`group relative overflow-hidden bg-transparent hover:shadow-lg transition-all duration-300 rounded-lg sm:rounded-xl md:rounded-2xl ${
-                  !showAll && index >= 2 ? 'hidden md:block' : ''
-                }`}
-              >
-                {/* Image */}
-                <Link to={blog.link} className="block relative overflow-hidden">
-                  <div className="aspect-[4/3] overflow-hidden">
-                    <motion.img
-                      src={blog.image}
-                      alt={blog.title}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-                </Link>
+      <div className="min-h-screen bg-white">
 
-                {/* Content */}
-                <div className="p-4 sm:p-5 md:p-6 lg:p-8 flex flex-col h-[240px] sm:h-[260px] md:h-[280px]">
-                  <div>
-                    
-                    <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500 mb-2 sm:mb-3">
-                      <span>{blog.date}</span>
-                      <span>•</span>
-                      <span>{blog.readTime}</span>
-                    </div>
-                    <Link to={blog.link} className="group/title block mb-2 sm:mb-3">
-                      <h3 className="text-lg sm:text-xl md:text-2xl font-serif text-gray-900 group-hover/title:text-gray-600 transition-colors duration-300 leading-tight line-clamp-2">
-                        {blog.title}
-                      </h3>
-                    </Link>
-                    <p className="text-gray-600 leading-relaxed font-light text-sm mb-4 sm:mb-5 line-clamp-3">
-                      {blog.description}
-                    </p>
-                  </div>
-                  <div className="mt-auto ml-auto">
-                    <Link
-                      to={blog.link}
-                      className="inline-flex items-center gap-2 text-xs sm:text-sm tracking-[0.15em] text-gray-900 font-medium uppercase group/link"
-                    >
-                      <span className="relative">
-                        Discover more
-                        <span className="absolute bottom-0 left-0 w-full h-[1px] bg-gray-900"></span>
-                        <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-gray-600 group-hover/link:w-full transition-all duration-500"></span>
-                      </span>
-                      <svg
-                        className="w-3 h-3 sm:w-4 sm:h-4 transform group-hover/link:translate-x-1 transition-transform duration-300"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </motion.div>
-
-          {/* View More Button */}
-          {!showAll && blogs.length > 4 && (
-            <motion.div 
-              className="text-center mt-8 sm:mt-10 md:mt-12"
+        {/* Hero Section */}
+        <div className="relative h-[50vh] sm:h-[60vh] md:h-[70vh] bg-gray-900 overflow-hidden">
+          <img
+            src="/slider5.webp"
+            alt="The Arboreal Journal"
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-white/70 uppercase tracking-widest text-xs sm:text-sm mb-3 sm:mb-4 font-light"
             >
-              <button
-                onClick={() => setShowAll(true)}
-                className="px-8 sm:px-10 md:px-12 py-3 sm:py-3.5 md:py-4 bg-gray-900 text-white hover:bg-gray-800 rounded-full transition-all duration-300 font-light text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transform"
+              Stories & Insights
+            </motion.p>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extralight text-white mb-4 sm:mb-6 tracking-wide"
+            >
+              The Arboreal Journal
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-white/80 text-sm sm:text-base md:text-lg font-light max-w-xl sm:max-w-2xl"
+            >
+              Discover travel tips, wellness insights, and the stories behind our sanctuary in the hills of Lonavala.
+            </motion.p>
+          </div>
+        </div>
+
+        {/* Blog Grid Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
+          {blogs.length === 0 ? (
+            <div className="text-center py-20 text-gray-400 font-light text-lg">
+              No blogs available at the moment.
+            </div>
+          ) : (
+            <>
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
               >
-                View More Blogs
-              </button>
-            </motion.div>
+                {visibleBlogs.map((blog, index) => (
+                  <motion.div
+                    key={blog._id || blog.slug || index}
+                    variants={itemVariants}
+                    className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-100"
+                  >
+                    {/* Image */}
+                    <Link to={`/blog/${blog.slug}`} className="block overflow-hidden aspect-[16/10]">
+                      <img
+                        src={blog.coverImage || '/placeholder.webp'}
+                        alt={blog.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        loading="lazy"
+                      />
+                    </Link>
+
+                    {/* Content */}
+                    <div className="flex flex-col flex-1 p-3 sm:p-6">
+                      <p className="text-[10px] sm:text-xs text-gray-400 font-light mb-2 sm:mb-3 uppercase tracking-wider">
+                        {formatDate(blog.createdAt)} &bull; {blog.readingTime || '~5'} min read
+                      </p>
+                      <Link to={`/blog/${blog.slug}`}>
+                        <h2 className="text-sm sm:text-lg font-medium text-gray-900 mb-2 sm:mb-3 leading-snug group-hover:text-green-800 transition-colors duration-300 line-clamp-2">
+                          {blog.title}
+                        </h2>
+                      </Link>
+                      <p className="text-xs sm:text-sm text-gray-500 font-light leading-relaxed line-clamp-3 flex-1">
+                        {blog.excerpt || stripHtml(blog.metaDescription || blog.content || '').substring(0, 150) + '...'}
+                      </p>
+                      <Link
+                        to={`/blog/${blog.slug}`}
+                        className="mt-3 sm:mt-4 inline-flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs uppercase tracking-widest text-green-800 hover:text-green-600 font-medium transition-colors duration-300"
+                      >
+                        Discover more
+                        <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
+                      </Link>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+
+              {/* View More Button */}
+              {!showAll && blogs.length > 5 && (
+                <div className="flex justify-center mt-10 sm:mt-12">
+                  <button
+                    onClick={() => setShowAll(true)}
+                    className="px-8 sm:px-10 md:px-12 py-3 sm:py-3.5 md:py-4 bg-gray-900 text-white hover:bg-gray-800 rounded-full transition-all duration-300 font-light text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transform"
+                  >
+                    View More Blogs
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
-      </section>
-
-      {/* Newsletter CTA Section
-      <section className="py-10 sm:py-12 md:py-14 lg:py-16 xl:py-20 px-4 sm:px-6 bg-gray-900 text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light mb-3 sm:mb-4 px-2">
-              Subscribe to Our Journal
-            </h2>
-            <p className="text-xs sm:text-sm md:text-base text-gray-300 font-light mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
-              Receive the latest stories, travel tips, and exclusive offers
-              directly to your inbox.
-            </p>
-            <form className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-xl mx-auto px-2">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 sm:px-5 md:px-6 py-3 sm:py-3.5 md:py-4 bg-transperent/10 border border-white/20 rounded-full text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all duration-300"
-              />
-              <button
-                type="submit"
-                className="px-6 sm:px-7 md:px-8 py-3 sm:py-3.5 md:py-4 bg-transperent text-gray-900 hover:bg-gray-100 rounded-full transition-all duration-300 font-light text-xs sm:text-sm uppercase tracking-wider whitespace-nowrap shadow-lg hover:shadow-xl"
-              >
-                Subscribe
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      </section> */}
-    </div>
+      </div>
+    </>
   );
 };
 

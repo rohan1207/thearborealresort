@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useHomeSettings } from '../hooks/useHomeSettings';
 
 const ImageSlider = () => {
+  const { settings, loading } = useHomeSettings();
   const [currentPosition, setCurrentPosition] = useState(0);
   const containerRef = useRef(null);
   const [totalWidth, setTotalWidth] = useState(0);
@@ -11,34 +14,31 @@ const ImageSlider = () => {
   const [singleSetWidth, setSingleSetWidth] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(true);
 
-  // Hardcoded Cloudinary URLs - Cloud name: dxevy8mea
-  const cloudinaryImages = [
-    { name: 'slider5', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider5' },
-    { name: 'slider6', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider6' },
-    { name: 'slider7', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider7' },
-    { name: 'slider8', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider8' },
-    { name: 'slider9', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider9' },
-    { name: 'slider10', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider10' },
-    { name: 'slider11', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider11' },
-    { name: 'slider12', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider12' },
-    { name: 'slider13', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider13' },
-    { name: 'slider14', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider14' },
-    { name: 'slider15', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider15' },
-    { name: 'slider16', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider16' },
-    { name: 'slider17', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider17' },
-    { name: 'slider18', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider18' },
-    { name: 'slider19', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider19' },
-    { name: 'slider20', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider20' },
-    { name: 'slider21', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider21' },
-    { name: 'slider22', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider22' },
-    { name: 'slider23', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider23' },
-    { name: 'slider24', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider24' },
-    { name: 'slider25', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider25' },
-    { name: 'slider26', url: 'https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/slider/slider26' },
-  ];
+  // Slider images from backend home settings
+  const sliderImages = useMemo(() => {
+    const raw = settings?.sliderImages;
+    if (!Array.isArray(raw) || raw.length === 0) return [];
 
-  // Use Cloudinary URLs - duplicate for infinite scroll
-  const baseImages = cloudinaryImages.map((img, index) => ({
+    // Normalize possible formats: string URLs or objects with url/src
+    return raw
+      .map((item, index) => {
+        const url =
+          typeof item === 'string'
+            ? item
+            : item?.url || item?.src || '';
+
+        if (!url) return null;
+
+        return {
+          name: `slider-${index}`,
+          url,
+        };
+      })
+      .filter(Boolean);
+  }, [settings?.sliderImages]);
+
+  // Use backend slider images - duplicate for infinite scroll
+  const baseImages = sliderImages.map((img, index) => ({
     src: img.url,
     alt: `Resort view ${index + 5}`
   }));
@@ -87,33 +87,40 @@ const ImageSlider = () => {
     };
   }, [updateDimensions]);
 
-  // Auto-scroll with infinite loop - seamless
+  // Auto-scroll with infinite loop - seamless and scroll-aware
   useEffect(() => {
     if (totalWidth === 0 || viewportWidth === 0 || singleSetWidth === 0) return;
 
     const interval = setInterval(() => {
-      setCurrentPosition(prev => {
-        const scrollAmount = 400; // Move by 400px each time
-        let nextPosition = prev + scrollAmount;
-        
-        // When we've scrolled past the first set, reset to equivalent position in first set
-        // This creates seamless infinite loop
-        if (nextPosition >= singleSetWidth) {
-          // Disable transition for instant reset
-          setIsTransitioning(false);
-          nextPosition = nextPosition - singleSetWidth;
-          
-          // Re-enable transition after a brief moment
-          setTimeout(() => {
+      // If Lenis is actively scrolling the page, skip this tick so
+      // auto-scroll never fights with user scroll. We don't "catch up";
+      // we just wait for the next 3s tick.
+      if (typeof window !== 'undefined' && window.isLenisScrolling) {
+        return;
+          }
+
+          setCurrentPosition(prev => {
+            const scrollAmount = 400; // Move by 400px each time
+            let nextPosition = prev + scrollAmount;
+            
+        // When we've scrolled past the first set, reset to equivalent position in first set.
+        // Disable transition just for the wrap frame to keep it seamless.
+            if (nextPosition >= singleSetWidth) {
+          const wrappedPosition = nextPosition - singleSetWidth;
+              setIsTransitioning(false);
+          if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+            window.requestAnimationFrame(() => {
+                  setIsTransitioning(true);
+            });
+          } else {
             setIsTransitioning(true);
-          }, 50);
-          
-          return nextPosition;
-        }
-        
-        setIsTransitioning(true);
-        return nextPosition;
-      });
+          }
+          return wrappedPosition;
+            }
+            
+            setIsTransitioning(true);
+            return nextPosition;
+          });
     }, 3000); // 3 second pause
 
     return () => clearInterval(interval);
@@ -124,15 +131,15 @@ const ImageSlider = () => {
     const sizePattern = index % 4;
     switch(sizePattern) {
       case 0: // Small horizontal
-        return 'h-[180px] sm:h-[220px] w-[240px] sm:w-[300px]';
+        return 'h-[138px] sm:h-[176px] w-[186px] sm:w-[236px]';
       case 1: // Large horizontal
-        return 'h-[250px] sm:h-[300px] w-[320px] sm:w-[400px]';
+        return 'h-[194px] sm:h-[236px] w-[248px] sm:w-[314px]';
       case 2: // Medium vertical
-        return 'h-[280px] sm:h-[330px] w-[200px] sm:w-[250px]';
+        return 'h-[216px] sm:h-[258px] w-[156px] sm:w-[196px]';
       case 3: // Tall vertical
-        return 'h-[320px] sm:h-[380px] w-[220px] sm:w-[280px]';
+        return 'h-[248px] sm:h-[300px] w-[170px] sm:w-[220px]';
       default:
-        return 'h-[250px] sm:h-[300px] w-[320px] sm:w-[400px]';
+        return 'h-[194px] sm:h-[236px] w-[248px] sm:w-[314px]';
     }
   }, []);
 
@@ -144,16 +151,15 @@ const ImageSlider = () => {
       return newSet;
     });
     
-    // Debounce dimension recalculation
+    // Debounce full dimension recalculation so totalWidth and singleSetWidth
+    // are based on all loaded images, not just the first few.
     if (resizeTimeoutRef.current) {
       clearTimeout(resizeTimeoutRef.current);
     }
     resizeTimeoutRef.current = setTimeout(() => {
-      if (containerRef.current) {
-        setTotalWidth(containerRef.current.scrollWidth);
-      }
+      updateDimensions();
     }, 100);
-  }, []);
+  }, [updateDimensions]);
 
   const handlePrevious = useCallback(() => {
     setCurrentPosition(prev => {
@@ -195,6 +201,10 @@ const ImageSlider = () => {
     });
   }, [singleSetWidth]);
 
+  // If data is still loading and we don't have any images yet,
+  // show lightweight placeholder cards so the section isn't blank.
+  const isLoadingWithoutImages = loading && baseImages.length === 0;
+
   return (
     <div className="relative w-full bg-[#f5f3ed] py-8 sm:py-12">
       {/* Text Content */}
@@ -228,20 +238,35 @@ const ImageSlider = () => {
 
         {/* Images Wrapper */}
         <div className="overflow-hidden">
+          {isLoadingWithoutImages ? (
+            <div className="flex items-center gap-4 sm:gap-6 px-4 sm:px-8">
+              {Array.from({ length: 6 }).map((_, index) => {
+                const imageClass = getImageClass(index);
+                return (
+                  <div
+                    key={`placeholder-${index}`}
+                    className={`flex-shrink-0 ${imageClass} bg-gray-300/70 animate-pulse`}
+                  />
+                );
+              })}
+            </div>
+          ) : (
           <div
             ref={containerRef}
             className="flex items-center gap-4 sm:gap-6 px-4 sm:px-8"
             style={{
               transform: `translate3d(-${currentPosition}px, 0, 0)`,
               willChange: 'transform',
-              transition: isTransitioning ? 'transform 1s ease-in-out' : 'none'
+                transition: isTransitioning ? 'transform 1s ease-in-out' : 'none'
             }}
           >
             {images.map((image, index) => {
               // Use modulo to get correct image class pattern
               const originalIndex = index % baseImages.length;
               const imageClass = getImageClass(originalIndex);
-              const isPriority = index < 6 || (index >= baseImages.length && index < baseImages.length + 6); // First 6 of each set load eagerly
+                const isPriority =
+                  index < 6 ||
+                  (index >= baseImages.length && index < baseImages.length + 6); // First 6 of each set load eagerly
               
               return (
                 <div
@@ -251,17 +276,28 @@ const ImageSlider = () => {
                   <img
                     src={image.src}
                     alt={image.alt}
-                    loading={isPriority ? "eager" : "lazy"}
+                      loading={isPriority ? 'eager' : 'lazy'}
                     decoding="async"
-                    fetchPriority={isPriority ? "high" : "low"}
-                    className={`${imageClass} object-cover rounded-lg shadow-xl`}
+                      fetchPriority={isPriority ? 'high' : 'low'}
+                    className={`${imageClass} object-cover`}
                     onLoad={() => handleImageLoad(originalIndex)}
                   />
                 </div>
               );
             })}
           </div>
+          )}
         </div>
+      </div>
+
+      {/* Gallery CTA pill */}
+      <div className="mt-6 flex justify-center">
+        <Link
+          to="/gallery"
+          className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-xs font-medium uppercase tracking-[0.25em] text-white shadow-sm hover:bg-black hover:shadow-md transition-all duration-300"
+        >
+          See More
+        </Link>
       </div>
 
       {/* Progress Indicator */}

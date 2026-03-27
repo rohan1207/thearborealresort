@@ -1,9 +1,8 @@
-import React, { useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
-import blogs from "../Data/blogsdata.json";
-
-const slugify = (s) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
+import { GenericSkeleton } from "../components/SkeletonLoader";
+import { apiFetch } from "../utils/api";
 
 const formatDate = (iso) => {
   try {
@@ -20,117 +19,222 @@ const formatDate = (iso) => {
 
 const BlogDetail = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const [blog, setBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const blog = useMemo(() => {
-    if (!Array.isArray(blogs)) return null;
-    return blogs.find((b) => slugify(b.title) === slug) || null;
+  useEffect(() => {
+    fetchBlog();
   }, [slug]);
 
-  if (!blog) {
+  const fetchBlog = async () => {
+    try {
+      setLoading(true);
+      const data = await apiFetch(`/blogs/${slug}`);
+      
+      if (data.success && data.blog) {
+        setBlog(data.blog);
+      } else {
+        setError('Blog not found');
+      }
+    } catch (err) {
+      console.error('Error fetching blog:', err);
+      setError('Failed to load blog');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-[#f5f3ed] min-h-screen flex items-center justify-center">
+        <GenericSkeleton lines={5} className="max-w-4xl w-full px-4" />
+      </div>
+    );
+  }
+
+  if (error || !blog) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-[#f5f3ed] px-4">
         <div className="text-center">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-gray-900 mb-3">Blog not found</h1>
-          <p className="text-gray-600 mb-6">The blog you are looking for does not exist.</p>
-          <Link to="/blog" className="px-6 py-2 bg-gray-900 text-white rounded-full text-sm">Back to Stories</Link>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-gray-900 mb-3">
+            {error || "Blog not found"}
+          </h1>
+          <p className="text-gray-600 mb-6">
+            The blog you are looking for does not exist.
+          </p>
+          <Link
+            to="/blog"
+            className="px-6 py-2 bg-gray-900 text-white rounded-full text-sm"
+          >
+            Back to Stories
+          </Link>
         </div>
       </div>
     );
   }
 
+  // Generate structured data for SEO
+  const structuredData = blog.structuredData || {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": blog.metaTitle || blog.title,
+    "description": blog.metaDescription || blog.excerpt,
+    "image": blog.coverImage,
+    "datePublished": blog.createdAt,
+    "dateModified": blog.updatedAt || blog.createdAt,
+    "author": {
+      "@type": "Organization",
+      "name": blog.author || "The Arboreal Resort"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Arboreal Resort",
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${window.location.origin}/logo.png`
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `${window.location.origin}/blog/${blog.slug}`
+    }
+  };
+
+  // Content is now HTML from TinyMCE, so we'll render it directly
+  const canonicalUrl = blog.canonicalUrl || `${window.location.origin}/blog/${blog.slug}`;
+  const ogImage = blog.ogImage || blog.coverImage;
+
   return (
-    <div className="bg-[#f5f3ed]">
-      <section
-        className="relative h-[42vh] sm:h-[48vh] md:h-[60vh] bg-center bg-cover flex items-end"
-        style={{ backgroundImage: `url('${blog.coverImage || ""}')` }}
-      >
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative max-w-5xl mx-auto w-full px-4 sm:px-6 md:px-8 pb-8">
-          <div className="mb-3">
-            <Link to="/blog" className="text-white/90 text-xs tracking-[0.15em] uppercase">← Back</Link>
-          </div>
-          <h1 className="text-white font-serif font-light text-3xl sm:text-4xl md:text-5xl leading-tight">
-            {blog.title}
-          </h1>
-          <div className="mt-3 text-white/90 text-xs sm:text-sm flex flex-wrap gap-3">
-            <span>{blog.author || "The Arboreal Resort"}</span>
-            {blog.createdAt && (
-              <>
-                <span>•</span>
-                <span>{formatDate(blog.createdAt)}</span>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-10 sm:py-12 md:py-16">
-        {(() => {
-          return null;
-        })()}
-        {blog.metaTitle && (
-          <h2 className="sr-only">{blog.metaTitle}</h2>
+    <>
+      <Helmet>
+        <title>{blog.metaTitle || blog.title} | The Arboreal Resort</title>
+        <meta
+          name="description"
+          content={blog.metaDescription || blog.excerpt || blog.title}
+        />
+        {blog.seoKeywords && blog.seoKeywords.length > 0 && (
+          <meta name="keywords" content={blog.seoKeywords.join(", ")} />
         )}
-        {blog.metaDescription && (
-          <p className="sr-only">{blog.metaDescription}</p>
-        )}
+        <link rel="canonical" href={canonicalUrl} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={blog.metaTitle || blog.title} />
+        <meta
+          property="og:description"
+          content={blog.metaDescription || blog.excerpt || blog.title}
+        />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:url" content={`${window.location.origin}/blog/${blog.slug}`} />
+        <meta property="article:published_time" content={blog.createdAt} />
+        <meta property="article:modified_time" content={blog.updatedAt || blog.createdAt} />
+        <meta property="article:author" content={blog.author || "The Arboreal Resort"} />
+        {blog.tags && blog.tags.map((tag, i) => (
+          <meta key={i} property="article:tag" content={tag} />
+        ))}
 
-        {blog.coverImage && (
-          <img
-            src={blog.coverImage}
-            alt={blog.title}
-            className="w-full rounded-xl shadow-md mb-8 block md:hidden"
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={blog.metaTitle || blog.title} />
+        <meta
+          name="twitter:description"
+          content={blog.metaDescription || blog.excerpt || blog.title}
+        />
+        <meta name="twitter:image" content={ogImage} />
+
+        {/* Structured Data */}
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+      </Helmet>
+
+      <div className="bg-[#f5f3ed]">
+        <section
+          className="relative h-[42vh] sm:h-[48vh] md:h-[60vh] bg-center bg-cover flex items-end"
+          style={{ backgroundImage: `url('${blog.coverImage || ""}')` }}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative max-w-5xl mx-auto w-full px-4 sm:px-6 md:px-8 pb-8">
+            <div className="mb-3">
+              <Link
+                to="/blog"
+                className="text-white/90 text-xs tracking-[0.15em] uppercase hover:text-white"
+              >
+                ← Back
+              </Link>
+            </div>
+            <h1 className="text-white font-serif font-light text-3xl sm:text-4xl md:text-5xl leading-tight">
+              {blog.title}
+            </h1>
+            <div className="mt-3 text-white/90 text-xs sm:text-sm flex flex-wrap gap-3">
+              <span>{blog.author || "The Arboreal Resort"}</span>
+              {blog.createdAt && (
+                <>
+                  <span>•</span>
+                  <span>{formatDate(blog.createdAt)}</span>
+                </>
+              )}
+              {blog.readingTime && (
+                <>
+                  <span>•</span>
+                  <span>{blog.readingTime} min read</span>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <main className="max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-10 sm:py-12 md:py-16">
+          {blog.coverImage && (
+            <img
+              src={blog.coverImage}
+              alt={blog.title}
+              className="w-full rounded-xl shadow-md mb-8 block md:hidden"
+            />
+          )}
+
+          <article 
+            className="prose prose-lg max-w-none text-gray-800 leading-relaxed
+              prose-headings:font-serif prose-headings:text-gray-900
+              prose-p:text-[15px] prose-p:sm:text-base prose-p:font-light prose-p:mb-4
+              prose-h1:text-3xl prose-h1:sm:text-4xl prose-h1:md:text-5xl prose-h1:mt-8 prose-h1:mb-4
+              prose-h2:text-2xl prose-h2:sm:text-3xl prose-h2:mt-8 prose-h2:mb-3
+              prose-h3:text-xl prose-h3:sm:text-2xl prose-h3:mt-6 prose-h3:mb-2
+              prose-ul:list-disc prose-ol:list-decimal
+              prose-a:text-[#006D5B] prose-a:underline
+              prose-strong:text-gray-900 prose-strong:font-medium
+              prose-img:rounded-lg prose-img:shadow-md"
+            dangerouslySetInnerHTML={{ __html: blog.content }}
           />
-        )}
 
-        {(() => {
-          const blocks = (blog.content || "")
-            .split(/\n\s*\n/)
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .map((b) => {
-              const len = b.length;
-              const hasPeriod = /[.!?]/.test(b);
-              const hasColonOrDash = /[:–—]/.test(b);
-              const words = b.split(/\s+/);
-              const capWords = words.filter((w) => /^[A-Z][a-z]/.test(w.replace(/[^A-Za-z]/g, ""))).length;
-              const capRatio = words.length ? capWords / words.length : 0;
-              if (len <= 100 && !hasPeriod && (capRatio >= 0.5 || words.length <= 8)) return { type: "h2", text: b };
-              if (len <= 160 && hasColonOrDash) return { type: "h3", text: b };
-              return { type: "p", text: b };
-            });
+          {/* Tags */}
+          {blog.tags && blog.tags.length > 0 && (
+            <div className="mt-8 flex flex-wrap gap-2">
+              {blog.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
 
-          return (
-            <article className="text-gray-800 leading-relaxed">
-              {blocks.map((blk, i) => {
-                if (blk.type === "h2")
-                  return (
-                    <h2 key={i} className="mt-8 mb-3 text-2xl sm:text-3xl font-serif text-gray-900">
-                      {blk.text}
-                    </h2>
-                  );
-                if (blk.type === "h3")
-                  return (
-                    <h3 key={i} className="mt-6 mb-2 text-xl sm:text-2xl font-serif text-gray-900">
-                      {blk.text}
-                    </h3>
-                  );
-                return (
-                  <p key={i} className="whitespace-pre-line text-[15px] sm:text-base font-light text-gray-800 mb-4">
-                    {blk.text}
-                  </p>
-                );
-              })}
-            </article>
-          );
-        })()}
-
-        <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-600">Written by {blog.author || "The Arboreal Resort"}</div>
-          <Link to="/blog" className="text-sm text-gray-900 underline underline-offset-4">All stories</Link>
-        </div>
-      </main>
-    </div>
+          <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Written by {blog.author || "The Arboreal Resort"}
+            </div>
+            <Link
+              to="/blog"
+              className="text-sm text-gray-900 underline underline-offset-4"
+            >
+              All stories
+            </Link>
+          </div>
+        </main>
+      </div>
+    </>
   );
 };
 

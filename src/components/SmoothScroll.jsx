@@ -2,46 +2,48 @@ import { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
 import { useLocation } from 'react-router-dom';
 
+/**
+ * Uses Lenis so mouse wheel / trackpad scroll works on all pages.
+ * Native-only scroll was failing (all pages stopped scrolling); Lenis handles wheel reliably.
+ */
 const SmoothScroll = ({ children }) => {
   const location = useLocation();
   const lenisRef = useRef(null);
 
   useEffect(() => {
-    // Initialize Lenis smooth scroll
     const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Custom easing for smooth feel
+      duration: 0.8,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 1,
-      smoothTouch: false, // Disable on touch devices for better native feel
+      smoothTouch: false,
       touchMultiplier: 2,
       infinite: false,
+      syncTouch: false,
+      syncTouchLerp: 0.075,
+      lerp: 0.15,
     });
 
     lenisRef.current = lenis;
-    
-    // Expose Lenis instance globally for ScrollToTop and other components
     window.lenis = lenis;
 
-    // Animation frame function
+    let rafId;
     function raf(time) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
     }
+    rafId = requestAnimationFrame(raf);
 
-    requestAnimationFrame(raf);
-
-    // Cleanup
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       lenis.destroy();
       lenisRef.current = null;
       delete window.lenis;
     };
   }, []);
 
-  // Scroll to top on route change
   useEffect(() => {
     if (lenisRef.current) {
       lenisRef.current.scrollTo(0, { immediate: true });
@@ -52,4 +54,3 @@ const SmoothScroll = ({ children }) => {
 };
 
 export default SmoothScroll;
-

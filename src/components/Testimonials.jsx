@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { useAboutSettings } from "../hooks/useAboutSettings";
 
 const Testimonials = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const { settings } = useAboutSettings();
 
-  const testimonials = [
+  const fallbackTestimonials = [
     {
       id: 1,
       name: "Priya Sharma",
@@ -43,6 +45,19 @@ const Testimonials = () => {
       image: "/slider9.webp",
     },
   ];
+
+  const testimonialsFromSettings =
+    settings?.testimonials && settings.testimonials.length > 0
+      ? settings.testimonials.map((t, idx) => ({
+          id: idx + 1,
+          name: t.name,
+          text: t.text,
+          rating: t.rating || 5,
+          image: t.imageUrl || fallbackTestimonials[idx % fallbackTestimonials.length].image,
+        }))
+      : fallbackTestimonials;
+
+  const testimonials = testimonialsFromSettings;
 
   const currentTestimonial = testimonials[currentIndex];
 

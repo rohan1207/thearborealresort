@@ -11,6 +11,7 @@ import {
   FiHome,
   FiCreditCard,
 } from "react-icons/fi";
+import { ENHANCE_YOUR_STAY_ACTIVITIES } from "../Data/Enhance_your_stay_data";
 
 const BookingConfirmation = () => {
   const location = useLocation();
@@ -38,6 +39,7 @@ const BookingConfirmation = () => {
     totalAmount,
     email,
     phone,
+    selectedActivities = [], // Selected activities from booking
   } = bookingDetails;
 
   // If cart is empty but a single room exists (old flow), adapt it
@@ -98,6 +100,16 @@ const BookingConfirmation = () => {
 
   // Get currency sign from first room, default to ₹
   const currencySign = normalizedCart[0]?.room?.currency_sign || "₹";
+
+  // Calculate activities total
+  const calculateActivitiesTotal = () => {
+    return selectedActivities.reduce((total, activityId) => {
+      const activity = ENHANCE_YOUR_STAY_ACTIVITIES.find((a) => a.id === activityId);
+      return total + (activity?.price || 0);
+    }, 0);
+  };
+
+  const activitiesTotal = calculateActivitiesTotal();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-white pt-28 pb-8 px-3 sm:px-4 lg:px-6">
@@ -279,6 +291,34 @@ const BookingConfirmation = () => {
                   </div>
                 )}
 
+                {/* Activities Breakdown */}
+                {selectedActivities.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Rooms Total</span>
+                        <span className="font-semibold text-gray-900">
+                          {currencySign}
+                          {(computedTotal - activitiesTotal).toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Activities Total</span>
+                        <span className="font-semibold text-gray-900">
+                          {currencySign}
+                          {activitiesTotal.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {(typeof totalAmount === "number" || computedTotal > 0) && (
                   <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg mt-3">
                     <span className="text-white font-medium">Total Paid</span>
@@ -394,6 +434,61 @@ const BookingConfirmation = () => {
                     );
                   })}
                 </div>
+
+                {/* Selected Activities Section */}
+                {selectedActivities.length > 0 && (
+                  <div className="mt-4 pt-4 border-t-2 border-gray-300">
+                    <h3 className="text-base sm:text-lg font-serif text-gray-900 mb-3">
+                      Selected Activities
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedActivities.map((activityId) => {
+                        const activity = ENHANCE_YOUR_STAY_ACTIVITIES.find((a) => a.id === activityId);
+                        if (!activity) return null;
+                        const activityImage = activity.images[0] || "";
+                        return (
+                          <div
+                            key={activityId}
+                            className="border border-gray-200 rounded-lg p-3 bg-gray-50 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Activity Image */}
+                              {activityImage && (
+                                <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-200">
+                                  <img
+                                    src={activityImage}
+                                    alt={activity.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.src = "https://via.placeholder.com/80?text=" + activity.name.substring(0, 2);
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1">
+                                  {activity.name}
+                                </h4>
+                                <p className="text-xs sm:text-sm text-gray-600 mb-2">
+                                  {activity.description}
+                                </p>
+                                <p className="text-sm sm:text-base font-bold text-gray-900">
+                                  {currencySign}{activity.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between items-center pt-3 border-t border-gray-300 mt-3">
+                        <span className="text-sm sm:text-base font-semibold text-gray-700">Activities Total</span>
+                        <span className="text-base sm:text-lg font-bold text-gray-900">
+                          {currencySign}{activitiesTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Total Summary */}
                 <div className="mt-4 pt-4 border-t-2 border-gray-300">

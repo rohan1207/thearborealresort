@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -13,14 +14,24 @@ import {
   FiGrid,
   FiAirplay,
   FiX,
+  FiChevronLeft,
+  FiChevronRight,
 } from "react-icons/fi";
 import { ROOMS, findRoomByName } from "../Data/rooms";
+import { useGlobalSettings } from "../hooks/useGlobalSettings";
+import { apiFetch } from "../utils/api";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
 const UnifiedBooking = () => {
   const navigate = useNavigate();
+  const { settings: globalSettings } = useGlobalSettings();
+  
+  // Activities and booking policy from backend
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [bookingPolicy, setBookingPolicy] = useState(null);
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1); // 1: Calendar, 2: Select Room, 3: Personal Info, 4: Payment
@@ -64,6 +75,72 @@ const UnifiedBooking = () => {
   });
   const [personalInfoErrors, setPersonalInfoErrors] = useState({});
   
+  // Step 3: Activities state
+  const [selectedActivities, setSelectedActivities] = useState([]); // Array of activity IDs (using _id from backend)
+  const [activityImageIndices, setActivityImageIndices] = useState({}); // { activityId: currentImageIndex }
+  const [expandedActivityDescriptions, setExpandedActivityDescriptions] = useState(new Set()); // activity IDs whose description is expanded (Read more)
+  
+  // Fetch activities and booking policy from backend
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        setLoadingActivities(true);
+        const data = await apiFetch("/activities");
+        if (data.success && data.activities) {
+          setActivities(data.activities);
+        }
+      } catch (err) {
+        console.error("Failed to fetch activities:", err);
+      } finally {
+        setLoadingActivities(false);
+      }
+    };
+    
+    if (globalSettings?.activitiesEnabled) {
+      fetchActivities();
+    }
+    
+    // Set booking policy from global settings
+    if (globalSettings?.bookingPolicy) {
+      console.log("Booking policy from backend:", globalSettings.bookingPolicy);
+      setBookingPolicy(globalSettings.bookingPolicy);
+    }
+  }, [globalSettings]);
+
+  // Cleanup: restore body scroll when component unmounts or modal closes
+  useEffect(() => {
+    return () => {
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      if (scrollY) {
+        const scrollPosition = parseInt(scrollY.replace('px', '') || '0') * -1;
+        window.scrollTo(0, scrollPosition);
+      }
+    };
+  }, []);
+
+  // Cleanup body scroll when modal closes
+  useEffect(() => {
+    if (!showBookingConditions) {
+      const scrollY = document.body.style.top;
+      if (scrollY) {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        const scrollPosition = parseInt(scrollY.replace('px', '') || '0') * -1;
+        window.scrollTo(0, scrollPosition);
+      }
+    }
+  }, [showBookingConditions]);
+  
   // Step 4: Payment state
   const [bookingDetails, setBookingDetails] = useState(null);
   const [selectedExtras, setSelectedExtras] = useState({});
@@ -82,7 +159,33 @@ const UnifiedBooking = () => {
   ];
 
   // Pricing configuration (business rules)
-  const DISCOUNT_AMOUNT = 1500; // ₹1500 flat discount applied to base rate only (not on extra adult/child rates)
+  // Helper function to apply discount based on type (amount or percentage)
+  const applyDiscountToRate = (baseRate) => {
+    if (!baseRate || baseRate <= 0) return 0;
+    
+    const discountType = globalSettings?.discountType || 'amount';
+    const discountValue = Number(globalSettings?.discountValue) || 
+                          Number(globalSettings?.discountAmount) || 
+                          (discountType === 'amount' ? 1500 : 20);
+    
+    if (discountType === 'percentage') {
+      // Percentage discount: baseRate * (1 - discountValue/100)
+      // Example: ₹10,000 * (1 - 20/100) = ₹10,000 * 0.8 = ₹8,000
+      const discounted = baseRate * (1 - discountValue / 100);
+      return Math.max(0, Math.round(discounted * 100) / 100);
+    } else {
+      // Flat amount discount: baseRate - discountValue
+      // Example: ₹10,000 - ₹1,500 = ₹8,500
+      return Math.max(0, Math.round((baseRate - discountValue) * 100) / 100);
+    }
+  };
+  
+  // Backward compatibility constant (for any remaining references)
+  const DISCOUNT_AMOUNT = Number(globalSettings?.discountAmount) || 
+                          (globalSettings?.discountType === 'amount' 
+                            ? Number(globalSettings?.discountValue) || 1500 
+                            : 1500);
+  
   const GST_RATE_LOW = 0.05; // 5% GST for base rate < 7500
   const GST_RATE_HIGH = 0.18; // 18% GST for base rate >= 7500 (split as 9% SGST + 9% CGST)
   const GST_THRESHOLD = 7500; // Threshold for GST rate selection
@@ -600,6 +703,41 @@ const UnifiedBooking = () => {
     }
   };
 
+  // Activity handlers
+  const handleActivityToggle = (activityId) => {
+    setSelectedActivities((prev) => {
+      if (prev.includes(activityId)) {
+        return prev.filter((id) => id !== activityId);
+      } else {
+        return [...prev, activityId];
+      }
+    });
+  };
+
+  const handleActivityImageNavigation = (activityId, direction) => {
+    const activity = activities.find((a) => a._id === activityId);
+    if (!activity || !activity.images || activity.images.length === 0) return;
+
+    setActivityImageIndices((prev) => {
+      const currentIndex = prev[activityId] || 0;
+      let newIndex;
+      if (direction === "next") {
+        newIndex = (currentIndex + 1) % activity.images.length;
+      } else {
+        newIndex = (currentIndex - 1 + activity.images.length) % activity.images.length;
+      }
+      return { ...prev, [activityId]: newIndex };
+    });
+  };
+
+  // Calculate total activities amount
+  const calculateActivitiesTotal = () => {
+    return selectedActivities.reduce((total, activityId) => {
+      const activity = activities.find((a) => a._id === activityId);
+      return total + (activity?.price || 0);
+    }, 0);
+  };
+
   const titles = ["Mr.", "Mrs.", "Ms.", "Dr.", "Prof."];
   const genders = ["Male", "Female", "Other"];
 
@@ -639,8 +777,13 @@ const UnifiedBooking = () => {
       );
     }
 
+    // Calculate activities total and per-night amount
+    const activitiesTotal = calculateActivitiesTotal();
+    const nights = bookingDetails?.nights || calculateNights();
+    const activitiesPerNight = nights > 0 ? activitiesTotal / nights : 0;
+
     // Helper to build nightly rate strings (comma separated) as required by eZee for multiple nights
-    const buildNightlyRateString = (rateInfo, applyDiscount = false) => {
+    const buildNightlyRateString = (rateInfo, applyDiscount = false, addActivities = false) => {
       const exclusiveRates = rateInfo?.exclusive_tax || {};
       const fallbackRate =
         Object.values(exclusiveRates)[0] ??
@@ -660,11 +803,17 @@ const UnifiedBooking = () => {
             ? exclusiveRates[dateKey]
             : fallbackRate;
         
-        // Apply ₹1500 discount only to base rate (not to extra adult/child rates)
-        const originalRate = parseFloat(nightlyRateValue ?? 0);
-        const discountedRate = applyDiscount 
-          ? Math.max(0, originalRate - DISCOUNT_AMOUNT) // Ensure rate doesn't go below 0
+        // Apply discount only to base rate (not to extra adult/child rates)
+        let originalRate = parseFloat(nightlyRateValue ?? 0);
+        let discountedRate = applyDiscount 
+          ? applyDiscountToRate(originalRate) // Apply discount based on type (amount or percentage)
           : originalRate;
+        
+        // Add activities amount per night to base rate only
+        if (addActivities && applyDiscount) {
+          discountedRate += activitiesPerNight;
+        }
+        
         const roundedRate = Math.round(discountedRate * 100) / 100;
         
         nightlyRates.push(String(roundedRate));
@@ -680,9 +829,26 @@ const UnifiedBooking = () => {
       const roomNumber = index + 1;
       
       // Build nightly rate strings for this room
-      const baseRate = buildNightlyRateString(room.room_rates_info, true); // Apply discount to base rate
+      // Add activities to base rate only for the first room (to avoid double counting)
+      const addActivitiesToThisRoom = index === 0;
+      const baseRate = buildNightlyRateString(room.room_rates_info, true, addActivitiesToThisRoom); // Apply discount and activities to base rate
       const extraAdultRate = buildNightlyRateString(room.extra_adult_rates_info, false); // No discount on extra adult
       const extraChildRate = buildNightlyRateString(room.extra_child_rates_info, false); // No discount on extra child
+
+      // Build SpecialRequest with activity info for admin visibility
+      let specialRequestText = "";
+      if (selectedActivities.length > 0) {
+        const activityDetails = selectedActivities.map((activityId) => {
+          const activity = activities.find((a) => a._id === activityId);
+          return activity ? `Customer has taken this add on activity (${activity.name}): ₹${activity.price}` : null;
+        }).filter(Boolean).join(" | ");
+        specialRequestText = activityDetails;
+        if (personalInfo.specialRequest && personalInfo.specialRequest.trim()) {
+          specialRequestText += ` | Additional special request of client: ${personalInfo.specialRequest}`;
+        }
+      } else {
+        specialRequestText = personalInfo.specialRequest || "";
+      }
 
       const roomDetail = {
         Rateplan_Id: String(room.roomrateunkid || ""),
@@ -697,8 +863,8 @@ const UnifiedBooking = () => {
       First_Name: String(personalInfo.firstName || ""),
       Last_Name: String(personalInfo.lastName || ""),
       Gender: "",
-        SpecialRequest: personalInfo.specialRequest || "",
-    };
+        SpecialRequest: specialRequestText,
+      };
 
     // CRITICAL: ExtraChild_Age is MANDATORY if number_children > 0
       if (cartItem.children > 0) {
@@ -855,7 +1021,8 @@ const UnifiedBooking = () => {
                     personalInfo: personalInfo,
                     totalAmount: totalAmount,
                     email: personalInfo.email,
-                    phone: personalInfo.phone
+                    phone: personalInfo.phone,
+                    selectedActivities: selectedActivities // Pass selected activities
                   }
                 }
               });
@@ -972,6 +1139,9 @@ const UnifiedBooking = () => {
         // Legacy fallback
         totalAmount = bookingDetails.totalPrice + (bookingDetails.extrasCharge || 0);
       }
+      
+      // Add activities total to the payment amount
+      totalAmount += calculateActivitiesTotal();
 
       // STEP 2: Open Razorpay payment popup (booking will be created after payment)
       await openRazorpayPopup(bookingPayload, totalAmount);
@@ -1029,10 +1199,8 @@ const UnifiedBooking = () => {
     
     if (baseExclusive === 0) return null;
     
-    // Apply ₹1500 flat discount
-    let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
-    // Round discounted base to 2 decimals
-    discountedBase = Math.round(discountedBase * 100) / 100;
+    // Apply discount (amount or percentage)
+    let discountedBase = applyDiscountToRate(baseExclusive);
     
     // Return discounted base (excluding GST)
     return discountedBase;
@@ -1050,10 +1218,8 @@ const UnifiedBooking = () => {
     
     if (baseExclusive === 0) return null;
     
-    // Apply ₹1500 flat discount
-    let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
-    // Round discounted base to 2 decimals (matching what we send to eZee)
-    discountedBase = Math.round(discountedBase * 100) / 100;
+    // Apply discount (amount or percentage)
+    let discountedBase = applyDiscountToRate(baseExclusive);
     
     // Conditional GST: 5% if base < 7500, else 9% SGST + 9% CGST (to match eZee's calculation)
     // GST threshold check uses original baseExclusive, but GST is applied to discounted base
@@ -1106,9 +1272,8 @@ const UnifiedBooking = () => {
         : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      // Apply ₹1500 flat discount per night to base rate only
-      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
-      discountedBase = Math.round(discountedBase * 100) / 100;
+      // Apply discount per night to base rate only
+      let discountedBase = applyDiscountToRate(baseExclusive);
       baseDiscountedTotal += discountedBase;
 
       // Calculate GST on base
@@ -1228,9 +1393,8 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      // Apply ₹1500 flat discount per night to base rate only
-      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
-      discountedBase = Math.round(discountedBase * 100) / 100;
+      // Apply discount per night to base rate only
+      let discountedBase = applyDiscountToRate(baseExclusive);
 
       // Conditional GST (threshold check uses original baseExclusive, but GST applied to discounted base)
       let baseTotalNight;
@@ -1320,10 +1484,9 @@ const UnifiedBooking = () => {
   const calculateRoomRates = (room) => {
     if (!room || !searchData) return null;
     
-    // Verify constants are defined
-    if (typeof DISCOUNT_AMOUNT === 'undefined') {
-      console.error('[ERROR] DISCOUNT_AMOUNT is undefined!');
-      return null;
+    // Verify discount settings are available
+    if (!globalSettings || (!globalSettings.discountValue && !globalSettings.discountAmount)) {
+      console.warn('[WARNING] Discount settings not available, using defaults');
     }
 
     const checkIn = new Date(searchData.checkIn);
@@ -1363,10 +1526,8 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      // Apply ₹1500 flat discount per night to base rate only
-      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
-      // Round discounted base to 2 decimals (matching what we send to eZee)
-      discountedBase = Math.round(discountedBase * 100) / 100;
+      // Apply discount per night to base rate only
+      let discountedBase = applyDiscountToRate(baseExclusive);
       
       // Conditional GST: 5% if base < 7500, else 9% SGST + 9% CGST (to match eZee's calculation)
       // GST threshold check uses original baseExclusive, but GST applied to discounted base
@@ -1500,9 +1661,8 @@ const UnifiedBooking = () => {
           : parseFloat(fallbackBaseExclusive);
       if (Number.isNaN(baseExclusive)) baseExclusive = 0;
 
-      // Apply ₹1500 flat discount per night to base rate only
-      let discountedBase = Math.max(0, baseExclusive - DISCOUNT_AMOUNT);
-      discountedBase = Math.round(discountedBase * 100) / 100;
+      // Apply discount per night to base rate only
+      let discountedBase = applyDiscountToRate(baseExclusive);
       baseDiscountedTotal += discountedBase;
 
       // GST calculation (threshold check uses original baseExclusive, but GST applied to discounted base)
@@ -2816,7 +2976,20 @@ const UnifiedBooking = () => {
                                   {/* Actions */}
                                   <div className="flex flex-col gap-3">
                                     <button
-                                      onClick={() => setShowBookingConditions(true)}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        // Store current scroll position
+                                        const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+                                        // Prevent body scroll when modal opens
+                                        document.body.style.position = 'fixed';
+                                        document.body.style.top = `-${scrollY}px`;
+                                        document.body.style.width = '100%';
+                                        document.body.style.left = '0';
+                                        document.body.style.right = '0';
+                                        document.body.style.overflow = 'hidden';
+                                        setShowBookingConditions(true);
+                                      }}
                                       className="text-sm text-gray-700 underline hover:text-black text-center"
                                     >
                                       Booking policies
@@ -2974,73 +3147,158 @@ const UnifiedBooking = () => {
               </div>
             )}
 
-            {/* Booking Conditions Modal */}
-            {showBookingConditions && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            {/* Booking Conditions Modal - Using Portal */}
+            {showBookingConditions && createPortal(
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-[9999]"
+                style={{ 
+                  position: 'fixed', 
+                  top: 0, 
+                  left: 0, 
+                  right: 0, 
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '1rem',
+                  overflow: 'visible',
+                  overscrollBehavior: 'none'
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    const scrollY = document.body.style.top;
+                    setShowBookingConditions(false);
+                    document.body.style.position = '';
+                    document.body.style.top = '';
+                    document.body.style.width = '';
+                    document.body.style.left = '';
+                    document.body.style.right = '';
+                    document.body.style.overflow = '';
+                    if (scrollY) {
+                      const scrollPosition = parseInt(scrollY.replace('px', '') || '0') * -1;
+                      window.scrollTo(0, scrollPosition);
+                    }
+                  }
+                }}
+              >
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                  className="bg-white rounded-lg max-w-2xl w-full shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ 
+                    maxHeight: '85vh',
+                    height: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    margin: 'auto',
+                    position: 'relative',
+                    overflow: 'visible'
+                  }}
                 >
-                  <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                  <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10 shadow-sm flex-shrink-0">
                     <h3 className="text-xl font-bold text-black">Booking Conditions</h3>
                     <button
-                      onClick={() => setShowBookingConditions(false)}
-                      className="text-gray-600 hover:text-black"
+                      onClick={() => {
+                        const scrollY = document.body.style.top;
+                        setShowBookingConditions(false);
+                        document.body.style.position = '';
+                        document.body.style.top = '';
+                        document.body.style.width = '';
+                        document.body.style.left = '';
+                        document.body.style.right = '';
+                        document.body.style.overflow = '';
+                        if (scrollY) {
+                          const scrollPosition = parseInt(scrollY.replace('px', '') || '0') * -1;
+                          window.scrollTo(0, scrollPosition);
+                        }
+                      }}
+                      className="text-gray-600 hover:text-black transition-colors"
                     >
                       <FiX className="w-6 h-6" />
                     </button>
                   </div>
-                  <div className="p-6 space-y-6">
-                    {/* Cancellation Policy */}
-                    <div>
-                      <h4 className="font-semibold text-black mb-2">Cancellation policy</h4>
-                      <p className="text-sm text-gray-700">
-                        Cancellation between 15 days and the day before arrival (within 12:00pm local time) will incur 50% charge plus taxes. Cancellation within 24 hours before the arrival date (from 12:00pm local time), early departure, no show will incur 100% charge plus taxes.
-                      </p>
-                    </div>
-                    {/*Extra charges*/}
-                    {/* Extra Occupancy Policy */}
-<div>
-  <h4 className="font-semibold text-black mb-2">Extra occupancy policy</h4>
-  <p className="text-sm text-gray-700">                                                                                        
-    All rooms are configured for a maximum occupancy of 2 guests. For bookings made
-    for 3 guests, an extra mattress will be arranged and additional charges will apply.
-  </p>
-</div>
-
-
-                    {/* Guarantee Policy */}
-                    <div>
-                      <h4 className="font-semibold text-black mb-2">Guarantee policy</h4>
-                      <p className="text-sm text-gray-700">
-                        Valid credit card details required to guarantee reservation. Full prepayment required 15 days prior to arrival.
-                      </p>
-                    </div>
-
-                    {/* Children Policy */}
-                    <div>
-                      <h4 className="font-semibold text-black mb-2">Children policy</h4>
-                      <p className="text-sm text-gray-700">
-                        Children aged 11 years and older are fully charged.
-                      </p>
-                    </div>
-
-                    {/* Check In Policy */}
-                    <div>
-                      <h4 className="font-semibold text-black mb-2">Check in policy</h4>
-                      <p className="text-sm text-gray-700">
-                        Check-in after 2:00 pm. Check-out before 12:00 pm.
-                      </p>
-                    </div>
-
-                    {/* Pet Policy */}
-                    <div>
-                      <h4 className="font-semibold text-black mb-2">Pet policy</h4>
-                      <p className="text-sm text-gray-700">
-                        Small pets are allowed with prior approval by the property.
-                      </p>
-                    </div>
+                  <div 
+                    className="p-6 space-y-6"
+                    style={{ 
+                      maxHeight: 'calc(85vh - 73px)',
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      WebkitOverflowScrolling: 'touch',
+                      overscrollBehavior: 'contain',
+                      flex: '1 1 auto',
+                      minHeight: 0,
+                      position: 'relative',
+                      cursor: 'default'
+                    }}
+                    onWheel={(e) => {
+                      // Allow scrolling within the modal content
+                      e.stopPropagation();
+                    }}
+                    onTouchMove={(e) => {
+                      // Allow touch scrolling within the modal content
+                      e.stopPropagation();
+                    }}
+                  >
+                    {/* Dynamic Policies */}
+                    {!bookingPolicy ? (
+                      <div className="text-sm text-gray-500 text-center py-4">
+                        Loading booking policies...
+                      </div>
+                    ) : Array.isArray(bookingPolicy) && bookingPolicy.length > 0 ? (
+                      bookingPolicy
+                        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                        .map((policy, index) => (
+                          <div key={index}>
+                            <h4 className="font-semibold text-black mb-2">{policy.title}</h4>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                              {policy.content}
+                            </p>
+                          </div>
+                        ))
+                    ) : bookingPolicy && typeof bookingPolicy === 'object' && !Array.isArray(bookingPolicy) ? (
+                      // Fallback for old format (object)
+                      <>
+                        {bookingPolicy.cancellation && (
+                          <div>
+                            <h4 className="font-semibold text-black mb-2">Cancellation policy</h4>
+                            <p className="text-sm text-gray-700">{bookingPolicy.cancellation}</p>
+                          </div>
+                        )}
+                        {bookingPolicy.extraOccupancy && (
+                          <div>
+                            <h4 className="font-semibold text-black mb-2">Extra occupancy policy</h4>
+                            <p className="text-sm text-gray-700">{bookingPolicy.extraOccupancy}</p>
+                          </div>
+                        )}
+                        {bookingPolicy.guarantee && (
+                          <div>
+                            <h4 className="font-semibold text-black mb-2">Guarantee policy</h4>
+                            <p className="text-sm text-gray-700">{bookingPolicy.guarantee}</p>
+                          </div>
+                        )}
+                        {bookingPolicy.children && (
+                          <div>
+                            <h4 className="font-semibold text-black mb-2">Children policy</h4>
+                            <p className="text-sm text-gray-700">{bookingPolicy.children}</p>
+                          </div>
+                        )}
+                        {bookingPolicy.checkIn && (
+                          <div>
+                            <h4 className="font-semibold text-black mb-2">Check in policy</h4>
+                            <p className="text-sm text-gray-700">{bookingPolicy.checkIn}</p>
+                          </div>
+                        )}
+                        {bookingPolicy.pet && (
+                          <div>
+                            <h4 className="font-semibold text-black mb-2">Pet policy</h4>
+                            <p className="text-sm text-gray-700">{bookingPolicy.pet}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm text-gray-500">No booking policies available.</div>
+                    )}
 
                     {/* Charges Section */}
                     {/* <div className="border-t border-gray-200 pt-6">
@@ -3091,7 +3349,8 @@ const UnifiedBooking = () => {
                     </div> */}
                   </div>
                 </motion.div>
-              </div>
+              </div>,
+              document.body
             )}
           </motion.div>
         )}
@@ -3102,9 +3361,155 @@ const UnifiedBooking = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
+            {/* Enhance Your Stay Activities Section - Full Width at Top */}
+            {globalSettings?.activitiesEnabled && activities.length > 0 && (
+              <div className="bg-white rounded-lg shadow-lg p-2 sm:p-4 md:p-5 mb-4 sm:mb-6">
+                <div className="text-center mb-2 sm:mb-4">
+                  <h2 className="text-base sm:text-lg md:text-xl font-serif font-bold text-gray-900 leading-tight">
+                    Enhance your stay with us
+                  </h2>
+                  <p className="text-xs sm:text-sm md:text-base font-serif text-gray-600 mt-1">
+                    and make it more memorable
+                  </p>
+                </div>
+                
+                {loadingActivities ? (
+                  <div className="text-center py-8 text-gray-500">Loading activities...</div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 max-w-4xl mx-auto">
+                    {activities.map((activity) => {
+                      const isSelected = selectedActivities.includes(activity._id);
+                      const currentImageIndex = activityImageIndices[activity._id] || 0;
+                      const currentImage = activity.images && activity.images.length > 0 
+                        ? (activity.images[currentImageIndex] || activity.images[0])
+                        : "";
+
+                  return (
+                      <div
+                        key={activity._id}
+                        className={`border-2 rounded-lg overflow-hidden transition-all cursor-pointer ${
+                          isSelected
+                            ? "border-black shadow-md"
+                            : "border-gray-200 hover:border-gray-400"
+                        }`}
+                        onClick={() => handleActivityToggle(activity._id)}
+                      >
+                        {/* Image section - image fills entire area with no space */}
+                        <div className="relative h-32 sm:h-44 md:h-52 overflow-hidden bg-gray-100 shrink-0">
+                          {currentImage && (
+                            <img
+                              src={currentImage}
+                              alt={activity.name}
+                              className="absolute inset-0 w-full h-full object-cover block"
+                              onError={(e) => {
+                                e.target.src = "https://via.placeholder.com/400x300?text=" + activity.name;
+                              }}
+                            />
+                          )}
+                          
+                          {/* Image Navigation Arrows */}
+                          {activity.images && activity.images.length > 1 && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleActivityImageNavigation(activity._id, "prev");
+                              }}
+                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-0.5 sm:p-1 rounded-full transition-all z-10"
+                              aria-label="Previous image"
+                            >
+                              <FiChevronLeft className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleActivityImageNavigation(activity._id, "next");
+                              }}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-0.5 sm:p-1 rounded-full transition-all z-10"
+                              aria-label="Next image"
+                            >
+                              <FiChevronRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                            </button>
+                            
+                            {/* Image Indicators */}
+                            {activity.images && activity.images.length > 1 && (
+                              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 sm:gap-1 z-10">
+                                {activity.images.map((_, idx) => (
+                                  <div
+                                    key={idx}
+                                    className={`h-0.5 sm:h-1 rounded-full transition-all ${
+                                      idx === currentImageIndex
+                                        ? "bg-white w-2 sm:w-4"
+                                        : "bg-white/50 w-0.5 sm:w-1"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {/* Activity Info */}
+                      <div className="p-1.5 sm:p-3">
+                        <div className="flex items-start justify-between mb-1 sm:mb-1.5">
+                          <div className="flex-1 pr-1 sm:pr-2 min-w-0 overflow-hidden">
+                            <h3 className="font-semibold text-[10px] sm:text-sm md:text-base text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-2">
+                              {activity.name}
+                            </h3>
+                            {expandedActivityDescriptions.has(activity._id) ? (
+                              <p className="text-[9px] sm:text-xs md:text-sm text-gray-600 leading-tight">
+                                {activity.description}
+                              </p>
+                            ) : (
+                              <div className="text-[9px] sm:text-xs md:text-sm text-gray-600 leading-tight">
+                                <p className="line-clamp-2 overflow-hidden text-[9px] sm:text-xs md:text-sm">
+                                  {activity.description || ""}
+                                </p>
+                                {activity.description && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedActivityDescriptions((prev) => new Set(prev).add(activity._id));
+                                    }}
+                                    className="text-[9px] sm:text-xs font-medium text-black hover:underline mt-0.5"
+                                  >
+                                    Read more
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-1 sm:ml-2 flex-shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleActivityToggle(activity._id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 cursor-pointer accent-black"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-1 sm:mt-2 pt-1 sm:pt-2 border-t border-gray-200">
+                          <p className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-900">
+                            ₹{activity.price.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Personal Details Form and Booking Summary - Side by Side */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
               {/* Form Section */}
               <div className="lg:col-span-2">
+                {/* Guest Details Form */}
                 <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 md:p-8">
                   <h2 className="text-xl sm:text-2xl font-serif font-bold text-gray-900 mb-4 sm:mb-6">
                     Guest Details
@@ -3457,6 +3862,49 @@ const UnifiedBooking = () => {
                     })}
                   </div>
 
+                  {/* Selected Activities */}
+                  {selectedActivities.length > 0 && (
+                    <div className="space-y-2 mb-4 pb-4 border-b">
+                      <h4 className="font-semibold text-sm text-gray-700 mb-2">Selected Activities</h4>
+                      {selectedActivities.map((activityId) => {
+                        const activity = activities.find((a) => a._id === activityId);
+                        if (!activity) return null;
+                        const activityImage = activity.images && activity.images.length > 0 ? activity.images[0] : "";
+                        return (
+                          <div key={activityId} className="border border-gray-200 rounded-lg p-2 bg-gray-50">
+                            <div className="flex items-center gap-2">
+                              {/* Small Activity Image */}
+                              {activityImage && (
+                                <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded overflow-hidden bg-gray-200">
+                                  <img
+                                    src={activityImage}
+                                    alt={activity.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.src = "https://via.placeholder.com/56?text=" + activity.name.substring(0, 2);
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-gray-900 truncate">{activity.name}</p>
+                                <p className="text-xs font-bold text-gray-900 mt-0.5">
+                                  ₹{activity.price.toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
+                        <span className="text-xs font-semibold text-gray-700">Activities Total</span>
+                        <span className="text-sm font-bold text-gray-900">
+                          ₹{calculateActivitiesTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3 py-4 border-t border-b">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Check-in</span>
@@ -3494,6 +3942,8 @@ const UnifiedBooking = () => {
                           bookingDetails.cart.forEach(item => {
                             total += item.total || 0;
                           });
+                          // Add activities total
+                          total += calculateActivitiesTotal();
                           return total.toFixed(2);
                         })()}
                       </span>
@@ -3642,6 +4092,49 @@ const UnifiedBooking = () => {
                     })}
                   </div>
 
+                  {/* Selected Activities */}
+                  {selectedActivities.length > 0 && (
+                    <div className="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b space-y-2">
+                      <h4 className="font-semibold text-xs sm:text-sm text-gray-700 mb-2">Selected Activities</h4>
+                      {selectedActivities.map((activityId) => {
+                        const activity = activities.find((a) => a._id === activityId);
+                        if (!activity) return null;
+                        const activityImage = activity.images && activity.images.length > 0 ? activity.images[0] : "";
+                        return (
+                          <div key={activityId} className="border border-gray-200 rounded-lg p-2 bg-gray-50">
+                            <div className="flex items-center gap-2">
+                              {/* Small Activity Image */}
+                              {activityImage && (
+                                <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded overflow-hidden bg-gray-200">
+                                  <img
+                                    src={activityImage}
+                                    alt={activity.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.src = "https://via.placeholder.com/56?text=" + activity.name.substring(0, 2);
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-gray-900 truncate">{activity.name}</p>
+                                <p className="text-xs font-bold text-gray-900 mt-0.5">
+                                  ₹{activity.price.toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
+                        <span className="text-xs font-semibold text-gray-700">Activities Total</span>
+                        <span className="text-sm font-bold text-gray-900">
+                          ₹{calculateActivitiesTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Guest Info */}
                   <div className="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b">
                     <p className="text-xs sm:text-sm text-gray-600 mb-1">Guest:</p>
@@ -3662,6 +4155,8 @@ const UnifiedBooking = () => {
                           bookingDetails.cart.forEach(item => {
                             total += item.total || 0;
                           });
+                          // Add activities total
+                          total += calculateActivitiesTotal();
                           return total.toFixed(2);
                         })()}
                       </span>

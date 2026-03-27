@@ -1,12 +1,16 @@
 import React, { memo } from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useHomeSettings } from "../hooks/useHomeSettings";
 
 const AccommodationCards = memo(() => {
-  const accommodations = [
+  // Don't block render - use defaults immediately
+  const { settings } = useHomeSettings();
+
+  const fallbackAccommodations = [
     {
       id: 1,
-      image: "https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/accommodation/ac2",
+      image:
+        "https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/accommodation/ac2",
       category: "ACCOMMODATION",
       title: "The Tree-House Resort",
       description:
@@ -14,7 +18,8 @@ const AccommodationCards = memo(() => {
     },
     {
       id: 2,
-      image: "https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/accommodation/ac",
+      image:
+        "https://res.cloudinary.com/dxevy8mea/image/upload/q_auto:good,w_1200,f_auto/Arboreal/accommodation/ac",
       category: "ACCOMMODATION",
       title: "The Amazing Nature",
       description:
@@ -22,32 +27,56 @@ const AccommodationCards = memo(() => {
     },
   ];
 
+  const accommodationsFromSettings =
+    settings?.accommodations && settings.accommodations.length > 0
+      ? settings.accommodations.map((item, index) => ({
+          id: index + 1,
+          image: item.imageUrl || fallbackAccommodations[index]?.image,
+          category: item.category || "ACCOMMODATION",
+          title: item.title || fallbackAccommodations[index]?.title,
+          description: item.description || fallbackAccommodations[index]?.description,
+        }))
+      : fallbackAccommodations;
+
+  const accommodations = accommodationsFromSettings;
+
   return (
-    <section className="py-12 sm:py-16 md:py-20 lg:py-28 px-4 sm:px-6 md:px-12 lg:px-20 bg-[#f5f3ed]">
+    <section 
+      className="py-12 sm:py-16 md:py-20 lg:py-28 px-4 sm:px-6 md:px-12 lg:px-20 bg-[#f5f3ed]"
+      style={{
+        transform: 'translateZ(0)',
+        willChange: 'auto',
+        contain: 'layout style paint', // CSS containment for better scroll performance
+        contentVisibility: 'auto',     // Let browser skip work when off-screen
+        containIntrinsicSize: '900px 900px', // Reserve space to avoid big relayouts
+      }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
-          {accommodations.map((item, index) => (
-            <motion.div
+          {accommodations.map((item, index) => {
+            const isFirst = index === 0;
+            return (
+            <div
               key={item.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ delay: index * 0.1, duration: 0.5, ease: "easeOut" }}
               className="group"
+              style={{ 
+                transform: 'translateZ(0)', // GPU acceleration
+              }}
             >
               {/* Image Container */}
               <div className="relative overflow-hidden mb-4 sm:mb-5 md:mb-6 rounded-lg">
-                <motion.img
+                <img
                   src={item.image}
                   alt={item.title}
                   className="w-full h-[280px] sm:h-[350px] md:h-[500px] object-cover"
-                  loading="lazy"
+                  loading={isFirst ? "eager" : "lazy"}
                   decoding="async"
-                  fetchPriority="low"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  style={{ willChange: 'transform' }}
+                  fetchPriority={isFirst ? "high" : "low"}
+                  style={{ 
+                    transform: 'translateZ(0)',
+                    backfaceVisibility: 'hidden',
+                  }}
                 />
               </div>
 
@@ -68,17 +97,16 @@ const AccommodationCards = memo(() => {
                   {item.description}
                 </p>
               </div>
-            </motion.div>
-          ))}
+            </div>
+          )})}
         </div>
 
         {/* View All Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4, duration: 0.8 }}
+        <div
           className="flex justify-center mt-10 sm:mt-12 md:mt-16"
+          style={{ 
+            transform: 'translateZ(0)', // GPU acceleration
+          }}
         >
           <Link to="/rooms">
           <button className="group relative px-6 sm:px-8 py-2.5 sm:py-3 overflow-hidden rounded-full">
@@ -94,7 +122,7 @@ const AccommodationCards = memo(() => {
             <div className="absolute inset-0 bg-gray-900 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
           </button>
           </Link>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

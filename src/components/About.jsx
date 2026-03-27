@@ -1,7 +1,40 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useAboutSettings } from "../hooks/useAboutSettings";
 
 const About = () => {
+  const { settings } = useAboutSettings();
+
+  const card1 = settings?.cards?.[0];
+  const card2 = settings?.cards?.[1];
+
+  const isValidCloudinaryUrl = (url) =>
+    typeof url === "string" &&
+    url.includes("res.cloudinary.com") &&
+    url.includes("dnztpad6y");
+
+  // Fallback to current static content if backend not available
+  const card1Title = card1?.title || "History of The Arboreal Resort";
+  const card1Desc1 =
+    card1?.description1 ||
+    "Welcome to The Arboreal Resort in Gevhande, Apti, Lonavala — a serene escape tucked at the foothills of the Western Ghats. Designed as a luxurious yet eco-friendly retreat, our resort is surrounded by lush greenery, tranquil hills, and an abundance of flora and fauna.";
+  const card1Desc2 =
+    card1?.description2 ||
+    "Here, you'll find more than just a stay. With an outdoor pool, a multi-cuisine restaurant, and curated activities, we bring you closer to nature while ensuring modern comforts. Whether it's trekking, bird watching, or a rejuvenating yoga session, every moment is crafted to help you reconnect with yourself and the world around you.";
+  // Prefer images from the correct Cloudinary cloud; otherwise use local fallbacks
+  const card1Image =
+    (card1?.imageUrl && isValidCloudinaryUrl(card1.imageUrl)) || "/slider23.webp";
+
+  const card2Title = card2?.title || "Why Choose Us?";
+  const card2Desc1 =
+    card2?.description1 ||
+    "At The Arboreal Resort, every detail is built to give you the perfect getaway. Our spacious, modern rooms come with private balconies offering panoramic views of the misty hills. Imagine mornings where you wake up to the melody of chirping birds, rustling trees, and cool breezes drifting through your window.";
+  const card2Desc2 =
+    card2?.description2 ||
+    "Whether you're here for adventure or relaxation, we've got something for everyone. From nature walks and meditation to poolside leisure and fine dining, we ensure your experience is both indulgent and unforgettable. For those seeking the best rainforest resort in Lonavala, Arboreal is where nature and luxury meet in harmony.";
+  const card2Image =
+    (card2?.imageUrl && isValidCloudinaryUrl(card2.imageUrl)) || "/ac2.webp";
+
   return (
     <div className="bg-[#f5f3ed] py-10 sm:py-12 md:py-16 lg:py-20 xl:py-24 px-4 sm:px-5 md:px-6">
       <div className="max-w-7xl mx-auto">
@@ -34,7 +67,7 @@ const About = () => {
           >
             <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border-4 sm:border-6 md:border-8 border-white">
               <img
-                src="/hero.webp"
+                src={card1Image}
                 alt="Arboreal Resort at Night"
                 className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] object-cover"
               />
@@ -50,22 +83,13 @@ const About = () => {
             className="order-1 lg:order-2 space-y-3 sm:space-y-4"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif text-gray-900 mb-4 sm:mb-5 md:mb-6">
-              History of The Arboreal Resort
+              {card1Title}
             </h2>
             <p className="text-gray-700 leading-relaxed text-xs sm:text-sm md:text-base">
-              Welcome to The Arboreal Resort in Gevhande, Apti, Lonavala — a
-              serene escape tucked at the foothills of the Western Ghats.
-              Designed as a luxurious yet eco-friendly retreat, our resort is
-              surrounded by lush greenery, tranquil hills, and an abundance of
-              flora and fauna.
+              {card1Desc1}
             </p>
             <p className="text-gray-600 leading-relaxed text-xs sm:text-sm md:text-base">
-              Here, you'll find more than just a stay. With an outdoor pool, a
-              multi-cuisine restaurant, and curated activities, we bring you
-              closer to nature while ensuring modern comforts. Whether it's
-              trekking, bird watching, or a rejuvenating yoga session, every
-              moment is crafted to help you reconnect with yourself and the
-              world around you.
+              {card1Desc2}
             </p>
           </motion.div>
         </div>
@@ -81,22 +105,13 @@ const About = () => {
             className="space-y-3 sm:space-y-4"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif text-gray-900 mb-4 sm:mb-5 md:mb-6">
-              Why Choose Us?
+              {card2Title}
             </h2>
             <p className="text-gray-700 leading-relaxed text-xs sm:text-sm md:text-base">
-              At The Arboreal Resort, every detail is built to give you the
-              perfect getaway. Our spacious, modern rooms come with private
-              balconies offering panoramic views of the misty hills. Imagine
-              mornings where you wake up to the melody of chirping birds,
-              rustling trees, and cool breezes drifting through your window.
+              {card2Desc1}
             </p>
             <p className="text-gray-600 leading-relaxed text-xs sm:text-sm md:text-base">
-              Whether you're here for adventure or relaxation, we've got
-              something for everyone. From nature walks and meditation to
-              poolside leisure and fine dining, we ensure your experience is
-              both indulgent and unforgettable. For those seeking the best
-              rainforest resort in Lonavala, Arboreal is where nature and luxury
-              meet in harmony.
+              {card2Desc2}
             </p>
           </motion.div>
 
@@ -109,7 +124,7 @@ const About = () => {
           >
             <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border-4 sm:border-6 md:border-8 border-white">
               <img
-                src="/slider13.webp"
+                src={card2Image}
                 alt="Resort Deck View"
                 className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] object-cover"
               />

@@ -1,6 +1,11 @@
 import React, { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 import { FiMapPin, FiPhone, FiMail, FiClock, FiSend } from "react-icons/fi";
+import { useGlobalSEO } from "../hooks/useGlobalSEO";
+import { useContactSettings, redirectToWhatsApp } from "../hooks/useContactSettings";
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -10,46 +15,130 @@ const ContactUs = () => {
     subject: "",
     message: "",
   });
+  const [sending, setSending] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null); // 'success' | 'error' | null
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setSubmitStatus(null);
   };
 
-  const handleSubmit = (e) => {
+  const { contactSettings } = useContactSettings();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission logic here
+    setSubmitStatus(null);
+
+    if (!contactSettings?.formEnabled) {
+      alert('Contact form is currently disabled. Please contact us directly.');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/contact/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim() || undefined,
+          subject: formData.subject.trim() || undefined,
+          message: formData.message.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to send message. Please try again.');
+      }
+
+      setSubmitStatus('success');
+
+      // If WhatsApp is configured and enabled, also open WhatsApp with the same message (existing behaviour)
+      if (contactSettings?.sendToWhatsApp && contactSettings?.whatsappNumber) {
+        let whatsappMessage = contactSettings.whatsappMessageTemplate ||
+          '*New Contact Form Submission*\n\n*Name:* {name}\n*Email:* {email}\n*Phone:* {phone}\n*Subject:* {subject}\n\n*Message:*\n{message}';
+        whatsappMessage = whatsappMessage
+          .replace(/{name}/g, formData.name || 'Not provided')
+          .replace(/{email}/g, formData.email || 'Not provided')
+          .replace(/{phone}/g, formData.phone || 'Not provided')
+          .replace(/{subject}/g, formData.subject || 'Not provided')
+          .replace(/{message}/g, formData.message || 'Not provided');
+        redirectToWhatsApp(contactSettings.whatsappNumber, whatsappMessage);
+      }
+
+      // Clear form after success
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+    } catch (err) {
+      setSubmitStatus('error');
+      alert(err.message || 'Something went wrong. Please try again or contact us directly.');
+    } finally {
+      setSending(false);
+    }
   };
 
-  const contactInfo = [
-    {
-      icon: <FiMapPin className="w-6 h-6" />,
-      title: "Visit Us",
-      details: [
-        "The Arboreal, Pvt. Road,",
-        "Gevhande Apati, Lonavala,",
-        "Maharashtra 412108",
-      ],
-      link: "https://maps.app.goo.gl/2EL8NXUZgh4An2NL8",
-    },
-    {
-      icon: <FiPhone className="w-6 h-6" />,
-      title: "Call Us",
-      details: ["‪+91 8065423948‬  *(+91 is essential)"],
-      link: "tel:8065423948‬",
-    },
-    {
-      icon: <FiMail className="w-6 h-6" />,
-      title: "Email Us",
-      details: ["reservations@thearborealresort.com"],
-      link: "mailto:reservations@thearborealresort.com",
-    },
-    {
-      icon: <FiClock className="w-6 h-6" />,
-      title: "Working Hours",
-      details: ["24/7 Reception", "Always Available"],
-      link: null,
-    },
-  ];
+  // Build contact info from database (with fallback defaults)
+  const getContactInfo = () => {
+    if (!contactSettings) {
+      // Default values while loading
+      return [
+        {
+          icon: <FiMapPin className="w-6 h-6" />,
+          title: "Visit Us",
+          details: ['The Arboreal, Pvt. Road,', 'Gevhande Apati, Lonavala,', 'Maharashtra 412108'],
+          link: 'https://maps.app.goo.gl/2EL8NXUZgh4An2NL8',
+        },
+        {
+          icon: <FiPhone className="w-6 h-6" />,
+          title: "Call Us",
+          details: ['+91 8065423948  *(+91 is essential)'],
+          link: 'tel:+918065423948',
+        },
+        {
+          icon: <FiMail className="w-6 h-6" />,
+          title: "Email Us",
+          details: ['reservations@thearborealresort.com'],
+          link: 'mailto:reservations@thearborealresort.com',
+        },
+        {
+          icon: <FiClock className="w-6 h-6" />,
+          title: "Working Hours",
+          details: ['24/7 Reception', 'Always Available'],
+          link: null,
+        },
+      ];
+    }
+
+    return [
+      {
+        icon: <FiMapPin className="w-6 h-6" />,
+        title: "Visit Us",
+        details: contactSettings.address ? contactSettings.address.split(',').map(s => s.trim()).filter(Boolean) : [],
+        link: contactSettings.addressLink || null,
+      },
+      {
+        icon: <FiPhone className="w-6 h-6" />,
+        title: "Call Us",
+        details: [contactSettings.phoneDisplay || contactSettings.phone || ''],
+        link: contactSettings.phone ? `tel:${contactSettings.phone.replace(/\s/g, '')}` : null,
+      },
+      {
+        icon: <FiMail className="w-6 h-6" />,
+        title: "Email Us",
+        details: [contactSettings.email || ''],
+        link: contactSettings.email ? `mailto:${contactSettings.email}` : null,
+      },
+      {
+        icon: <FiClock className="w-6 h-6" />,
+        title: "Working Hours",
+        details: contactSettings.workingHours ? contactSettings.workingHours.split(',').map(s => s.trim()).filter(Boolean) : [],
+        link: null,
+      },
+    ];
+  };
+
+  const contactInfo = getContactInfo();
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 30 },
@@ -60,10 +149,38 @@ const ContactUs = () => {
     },
   };
 
+  const { seoSettings } = useGlobalSEO();
+  const siteUrl = seoSettings?.siteUrl || window.location.origin;
+  const ogImage = seoSettings?.defaultOgImage || `${siteUrl}/slider5.webp`;
+  const pageTitle = `Contact Us | ${seoSettings?.siteName || 'The Arboreal Resort'}`;
+  const pageDescription = `Get in touch with ${seoSettings?.siteName || 'The Arboreal Resort'}. Contact us for reservations, inquiries, or to plan your perfect stay in Lonavala.`;
+
   return (
-    <div className="bg-[#f5f3ed]">
-      {/* Hero Section */}
-      <motion.section
+    <>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        {seoSettings?.defaultKeywords && seoSettings.defaultKeywords.length > 0 && (
+          <meta name="keywords" content={seoSettings.defaultKeywords.join(', ') + ', contact, reservations, booking'} />
+        )}
+        <link rel="canonical" href={`${siteUrl}/contact`} />
+        
+        {/* Open Graph */}
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${siteUrl}/contact`} />
+        <meta property="og:image" content={ogImage} />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
+      <div className="bg-[#f5f3ed]">
+        {/* Hero Section */}
+        <motion.section
         className="relative h-[50vh] sm:h-[55vh] md:h-[65vh] lg:h-[70vh] bg-cover bg-center flex items-center justify-center text-white overflow-hidden"
         style={{
           backgroundImage:
@@ -292,15 +409,22 @@ const ContactUs = () => {
                   className="w-full px-4 sm:px-5 py-2.5 sm:py-3 md:py-3.5 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#2a2a2a] focus:border-transparent transition-all duration-300 text-xs sm:text-sm font-light resize-none bg-gray-50 focus:bg-white"
                 ></textarea>
               </div>
+              {submitStatus === 'success' && (
+                <p className="text-sm text-green-600 font-medium">Message sent successfully. We&apos;ll get back to you soon.</p>
+              )}
+              {submitStatus === 'error' && (
+                <p className="text-sm text-red-600 font-medium">Failed to send. Please try again or contact us directly.</p>
+              )}
               <div>
                 <motion.button
                   type="submit"
-                  className="w-full bg-[#2a2a2a]/95 hover:bg-[#2a2a2a] text-white font-light py-3 sm:py-3.5 md:py-4 px-6 sm:px-7 md:px-8 rounded-lg sm:rounded-xl transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:shadow-xl"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  disabled={sending}
+                  className="w-full bg-[#2a2a2a]/95 hover:bg-[#2a2a2a] text-white font-light py-3 sm:py-3.5 md:py-4 px-6 sm:px-7 md:px-8 rounded-lg sm:rounded-xl transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed"
+                  whileHover={sending ? {} : { scale: 1.02 }}
+                  whileTap={sending ? {} : { scale: 0.98 }}
                 >
                   <FiSend className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Send Message
+                  {sending ? 'Sending...' : 'Send Message'}
                 </motion.button>
               </div>
             </form>
@@ -357,6 +481,7 @@ const ContactUs = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

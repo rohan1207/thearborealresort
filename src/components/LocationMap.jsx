@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 
 const LocationMap = () => {
   const locationDetails = {
@@ -12,32 +11,29 @@ const LocationMap = () => {
   };
 
   return (
-    <section className="py-12 sm:py-14 md:py-16 lg:py-24 px-4 sm:px-6 md:px-12 lg:px-20 bg-[#f5f3ed]">
+    <section 
+      className="py-12 sm:py-14 md:py-16 lg:py-24 px-4 sm:px-6 md:px-12 lg:px-20 bg-[#f5f3ed]"
+      style={{
+        transform: 'translateZ(0)',
+        willChange: 'auto',
+        contentVisibility: 'auto',
+        contain: 'layout style paint',
+        containIntrinsicSize: '700px 700px',
+      }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-6 sm:mb-8 md:mb-12"
-        >
+        <div className="text-center mb-6 sm:mb-8 md:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif text-gray-900 mb-3 sm:mb-4 px-4">
             {locationDetails.title}
           </h2>
           <p className="text-sm md:text-base text-gray-600 font-light tracking-wide px-4">
             {locationDetails.address}
           </p>
-        </motion.div>
+        </div>
 
         {/* Map Container */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative w-full bg-white shadow-lg overflow-hidden rounded-lg"
-        >
+        <div className="relative w-full bg-white shadow-lg overflow-hidden rounded-lg">
           {/* Map Embed - Responsive height */}
           <div className="relative w-full h-[300px] sm:h-[350px] md:h-[450px]">
             <iframe
@@ -51,16 +47,10 @@ const LocationMap = () => {
               sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
             ></iframe>
           </div>
-        </motion.div>
+        </div>
 
         {/* Get Directions Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="flex justify-center mt-6 sm:mt-8 md:mt-12"
-        >
+        <div className="flex justify-center mt-6 sm:mt-8 md:mt-12">
           <a
             href={locationDetails.mapLink}
             target="_blank"
@@ -90,16 +80,10 @@ const LocationMap = () => {
               Get Directions
             </span>
           </a>
-        </motion.div>
+        </div>
 
         {/* Additional Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-10 sm:mt-12 md:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center"
-        >
+        <div className="mt-10 sm:mt-12 md:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center">
           {/* Distance Info */}
           <div className="space-y-2">
             <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto bg-gray-900 text-white rounded-full flex items-center justify-center mb-2 sm:mb-3">
@@ -172,7 +156,7 @@ const LocationMap = () => {
               Lonavala Station 
             </p>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
