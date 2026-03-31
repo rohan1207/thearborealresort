@@ -36,16 +36,26 @@ const LandingPage = () => {
         }}
       />
 
-      <video
-        className="w-full max-w-4xl h-auto object-contain"
-        autoPlay
-        muted
-        preload="auto"
-        playsInline
-        onEnded={handleVideoEnd}
-      >
-        <source src="/landing.mp4" type="video/mp4" />
-      </video>
+      <div className="relative w-full max-w-sm sm:max-w-md md:max-w-2xl mx-auto bg-[#f5f3ed] overflow-hidden">
+        <video
+          className="block w-full h-auto object-contain"
+          autoPlay
+          muted
+          preload="auto"
+          playsInline
+          onEnded={handleVideoEnd}
+        >
+          <source src="/landing.mp4" type="video/mp4" />
+        </video>
+        <div
+          className="pointer-events-none absolute right-0 top-0 h-full bg-[#f5f3ed]"
+          style={{ width: "2px" }}
+        />
+        <div
+          className="pointer-events-none absolute left-0 bottom-0 w-full bg-[#f5f3ed]"
+          style={{ height: "2px" }}
+        />
+      </div>
     </motion.main>
   );
 };

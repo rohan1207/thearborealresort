@@ -129,7 +129,7 @@ const Hero = () => {
               loop
               playsInline
               muted={isMuted}
-              preload="auto"
+              preload="metadata"
               poster={heroPosterFromSettings || FALLBACK_POSTER}
               className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
               style={{ opacity: isVideoPlaying ? 1 : 0, zIndex: 2 }}

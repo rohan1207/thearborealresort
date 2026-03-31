@@ -266,9 +266,8 @@ const ImageSlider = () => {
               // Use modulo to get correct image class pattern
               const originalIndex = index % baseImages.length;
               const imageClass = getImageClass(originalIndex);
-                const isPriority =
-                  index < 6 ||
-                  (index >= baseImages.length && index < baseImages.length + 6); // First 6 of each set load eagerly
+              // Only the very first few images are high-priority; rest load lazily
+              const isPriority = index < 4;
               
               return (
                 <div
@@ -278,9 +277,9 @@ const ImageSlider = () => {
                   <img
                     src={image.src}
                     alt={image.alt}
-                      loading={isPriority ? 'eager' : 'lazy'}
+                    loading={isPriority ? 'eager' : 'lazy'}
                     decoding="async"
-                      fetchPriority={isPriority ? 'high' : 'low'}
+                    fetchPriority={isPriority ? 'high' : 'low'}
                     className={`${imageClass} object-cover`}
                     onLoad={() => handleImageLoad(originalIndex)}
                   />
