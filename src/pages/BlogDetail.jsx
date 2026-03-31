@@ -66,9 +66,9 @@ const BlogDetail = () => {
           </p>
           <Link
             to="/blog"
-            className="px-6 py-2 bg-gray-900 text-white rounded-full text-sm"
+            className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-5 sm:px-6 py-2 text-xs sm:text-sm tracking-[0.16em] text-white font-medium uppercase hover:bg-[#000000] transition-all duration-300"
           >
-            Back to Stories
+            <span>Back to Stories</span>
           </Link>
         </div>
       </div>
@@ -222,14 +222,14 @@ const BlogDetail = () => {
           )}
 
           <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-600 tracking-[0.12em] uppercase">
               Written by {blog.author || "The Arboreal Resort"}
             </div>
             <Link
               to="/blog"
-              className="text-sm text-gray-900 underline underline-offset-4"
+              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-5 sm:px-6 py-2 text-xs sm:text-sm tracking-[0.16em] text-white font-medium uppercase hover:bg-[#000000] transition-all duration-300"
             >
-              All stories
+              <span>All Stories</span>
             </Link>
           </div>
         </main>

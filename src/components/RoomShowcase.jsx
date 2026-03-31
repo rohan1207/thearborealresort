@@ -111,7 +111,7 @@ const RoomShowcase = memo(() => {
           <p className="text-xs sm:text-sm tracking-[0.3em] uppercase text-[#6B6B6B] font-normal mb-2 sm:mb-3">
             Accommodations
           </p>
-          <h2 className="text-3xl sm:text-4xl text-[#1a1a1a] font-normal">
+          <h2 className="text-2xl sm:text-3xl text-[#1a1a1a] font-normal">
             Raising Comfort To The Highest Level
           </h2>
         </div>

@@ -318,6 +318,21 @@ const Rooms = () => {
     }
   };
 
+  const handleRoomTabChange = (index) => {
+    setActiveTab(index);
+
+    const lenisInstance = window.lenis;
+    if (lenisInstance) {
+      lenisInstance.scrollTo(0, { immediate: true });
+    } else {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+    }
+  };
+
   const isCurrentRoomAvailable = () => {
     return originalRoomTab !== null && activeTab === originalRoomTab;
   };
@@ -388,7 +403,7 @@ const Rooms = () => {
           {rooms.map((room, index) => (
             <button
               key={index}
-              onClick={() => setActiveTab(index)}
+              onClick={() => handleRoomTabChange(index)}
               className={`
                 relative px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-300 border-b-2 flex-shrink-0
                 ${

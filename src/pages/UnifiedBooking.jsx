@@ -1882,7 +1882,7 @@ const UnifiedBooking = () => {
 
   // Render based on current step
   return (
-    <div className="min-h-screen bg-[#f5f3ed] pt-20 sm:pt-24 pb-4 sm:pb-6">
+    <div className="min-h-screen bg-[#f5f3ed] pt-20 pt-24 sm:pt-[150px] pb-4 sm:pb-6">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Progress Steps */}
         <div className="mb-4 sm:mb-6 overflow-x-auto mt-10">

@@ -81,9 +81,9 @@ const GalleryPage = () => {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
       
-      <div className="bg-[#f5f3ed] min-h-screen font-sans pt-24 md:pt-32">
+      <div className="bg-[#f5f3ed] min-h-screen font-sans pt-24 sm:pt-[165px]">
         {/* Header Section */}
-        <header className="py-12 md:py-20 text-center px-4">
+        <header className="py-12 md:py-20 text-center px-4 ">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -113,7 +113,7 @@ const GalleryPage = () => {
             </div>
           ) : (
             <div className="max-w-7xl mx-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
                 {galleryImages.map((image, index) => (
                   <div
                     key={image.id}

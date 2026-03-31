@@ -6,6 +6,7 @@ import RoomShowcase from "../components/RoomShowcase";
 import Testimonials from "../components/Testimonials";
 import LocationMap from "../components/LocationMap";
 import { useGlobalSEO } from "../hooks/useGlobalSEO";
+import Villaslider from "../components/Villaslider";
 
 const AboutUs = () => {
   const { seoSettings } = useGlobalSEO();
@@ -40,7 +41,8 @@ const AboutUs = () => {
       <div className="overflow-x-hidden">
         <Hero />
         <About />
-        <RoomShowcase />
+        {/* <RoomShowcase /> */}
+        <Villaslider />
         <Testimonials />
         <LocationMap />
       </div>

@@ -20,6 +20,13 @@ html {
   overscroll-behavior: none;
 }
 
+/* Desktop scaling: make 100% zoom feel closer to 80% on large screens */
+@media (min-width: 1024px) {
+  html {
+    font-size: 14px;
+  }
+}
+
 body {
   margin: 0;
   padding: 0;

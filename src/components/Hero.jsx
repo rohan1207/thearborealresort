@@ -103,11 +103,11 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="w-full bg-[#f5f3ed] pt-40 sm:pt-44 lg:pt-48 pb-8 sm:pb-10">
+    <section className="w-full bg-[#f5f3ed] pt-24 sm:pt-[150px] lg:pt-[140px] pb-8 sm:pb-10">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div
           ref={frameRef}
-          className="relative w-full h-[62vh] sm:h-[72vh] lg:h-[82vh] overflow-hidden border border-black/10 bg-black/10"
+          className="relative w-full h-[72vh] sm:h-[72vh] lg:h-[82vh] overflow-hidden border border-black/10 bg-black/10"
         >
           {/* Poster Image - visible until video is ready/playing */}
           {(heroPosterFromSettings || FALLBACK_POSTER) && (

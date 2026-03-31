@@ -88,7 +88,7 @@ const BentoBlogs = memo(() => {
             Stories & Insights
           </p>
           <h2
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-[#1a1a1a] font-normal leading-tight"
+            className="text-2xl sm:text-3xl md:text-3xl lg:text-3xl text-[#1a1a1a] font-normal leading-tight"
             style={{ transform: 'translateZ(0)' }}
           >
             Discover Arboreal

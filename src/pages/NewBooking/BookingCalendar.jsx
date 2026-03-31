@@ -172,7 +172,7 @@ const BookingCalendar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 sm:pt-24 pb-6 sm:pb-8">
+    <div className="min-h-screen bg-gray-50 pt-20 pt-24 sm:pt-[160px] pb-6 sm:pb-8">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Progress Steps */}
         <div className="mb-6 sm:mb-8 overflow-x-auto">

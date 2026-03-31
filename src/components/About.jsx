@@ -47,11 +47,11 @@ const About = () => {
           className="text-center mb-8 sm:mb-10 md:mb-12"
         >
           <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <div className="h-px w-8 sm:w-10 md:w-12 bg-gray-400"></div>
-            <p className="text-xs sm:text-sm tracking-[0.15em] sm:tracking-[0.2em] text-gray-600 uppercase">
+            <div className="h-px w-8 sm:w-10 md:w-12 bg-gray-300"></div>
+            <p className="text-xs sm:text-sm tracking-[0.3em] text-[#6B6B6B] uppercase font-normal">
               About Us
             </p>
-            <div className="h-px w-8 sm:w-10 md:w-12 bg-gray-400"></div>
+            <div className="h-px w-8 sm:w-10 md:w-12 bg-gray-300"></div>
           </div>
         </motion.div>
 
@@ -65,7 +65,7 @@ const About = () => {
             transition={{ duration: 0.8 }}
             className="order-2 lg:order-1"
           >
-            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border-4 sm:border-6 md:border-8 border-white">
+            <div className="relative overflow-hidden shadow-xl">
               <img
                 src={card1Image}
                 alt="Arboreal Resort at Night"
@@ -82,13 +82,13 @@ const About = () => {
             transition={{ duration: 0.8 }}
             className="order-1 lg:order-2 space-y-3 sm:space-y-4"
           >
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif text-gray-900 mb-4 sm:mb-5 md:mb-6">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-[#1a1a1a] mb-4 sm:mb-5 md:mb-6 leading-tight">
               {card1Title}
             </h2>
-            <p className="text-gray-700 leading-relaxed text-xs sm:text-sm md:text-base">
+            <p className="text-[#6B6B6B] leading-relaxed text-xs sm:text-sm md:text-base font-normal">
               {card1Desc1}
             </p>
-            <p className="text-gray-600 leading-relaxed text-xs sm:text-sm md:text-base">
+            <p className="text-[#6B6B6B] leading-relaxed text-xs sm:text-sm md:text-base font-normal">
               {card1Desc2}
             </p>
           </motion.div>
@@ -104,13 +104,13 @@ const About = () => {
             transition={{ duration: 0.8 }}
             className="space-y-3 sm:space-y-4"
           >
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif text-gray-900 mb-4 sm:mb-5 md:mb-6">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-[#1a1a1a] mb-4 sm:mb-5 md:mb-6 leading-tight">
               {card2Title}
             </h2>
-            <p className="text-gray-700 leading-relaxed text-xs sm:text-sm md:text-base">
+            <p className="text-[#6B6B6B] leading-relaxed text-xs sm:text-sm md:text-base font-normal">
               {card2Desc1}
             </p>
-            <p className="text-gray-600 leading-relaxed text-xs sm:text-sm md:text-base">
+            <p className="text-[#6B6B6B] leading-relaxed text-xs sm:text-sm md:text-base font-normal">
               {card2Desc2}
             </p>
           </motion.div>
@@ -122,7 +122,7 @@ const About = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border-4 sm:border-6 md:border-8 border-white">
+            <div className="relative overflow-hidden shadow-xl">
               <img
                 src={card2Image}
                 alt="Resort Deck View"

@@ -45,10 +45,10 @@ const FAQSection = () => {
     <section className="w-full bg-[#f5f3ed] py-12 sm:py-14 lg:py-16">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-10">
-          <p className="text-[11px] sm:text-xs tracking-[0.28em] uppercase text-gray-600 font-medium">
+          <p className="text-[11px] sm:text-xs tracking-[0.3em] uppercase text-[#6B6B6B] font-normal">
             FAQs
           </p>
-          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl text-gray-900 font-normal">
+          <h2 className="mt-3 text-2xl sm:text-3xl text-[#1a1a1a] font-normal">
             Everything You Need To Know
           </h2>
         </div>
@@ -64,14 +64,14 @@ const FAQSection = () => {
                   onClick={() => toggleItem(index)}
                   className="w-full text-left px-1 sm:px-2 py-4 sm:py-5 flex items-center justify-between gap-4"
                 >
-                  <span className="text-base sm:text-lg lg:text-xl text-gray-900 font-medium leading-snug">
+                  <span className="text-base sm:text-lg lg:text-xl text-[#1a1a1a] font-normal leading-snug">
                     {item.question}
                   </span>
 
                   <motion.span
                     animate={{ rotate: isOpen ? 45 : 0 }}
                     transition={{ duration: 0.2 }}
-                    className="text-2xl sm:text-3xl text-gray-700 leading-none flex-shrink-0"
+                    className="text-2xl sm:text-3xl text-[#6B6B6B] leading-none flex-shrink-0"
                     aria-hidden="true"
                   >
                     +

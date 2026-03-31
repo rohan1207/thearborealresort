@@ -71,9 +71,9 @@ const Home = () => {
           {/* <AccommodationCards /> */}
           <PremiumAbout/>
         </Suspense>
-        <Suspense fallback={<SectionLoader />}>
+        {/* <Suspense fallback={<SectionLoader />}>
           <RoomShowcase />
-        </Suspense>
+        </Suspense> */}
         <Suspense fallback={<SectionLoader />}>
           <Villaslider/>
         </Suspense>

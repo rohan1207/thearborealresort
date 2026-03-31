@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../utils/api";
 
 const SLIDES = [
   { id: 0, url: "/Forest_Private_Pool_1.jpg", label: "Amenities1" },
@@ -38,12 +40,18 @@ const AUTO_INTERVAL = 2000;
 const DRIFT_PX = 28;
 
 export default function VillaSlider() {
+  const navigate = useNavigate();
+
+  const sanitizeRoomName = (name) => name.toLowerCase().replace(/ /g, "-");
+  const slugifyRoomName = (name) => name.toLowerCase().replace(/ /g, "-");
+
+  const [slides, setSlides] = useState(SLIDES);
+
   const [current, setCurrent] = useState(0);
   const [nextSlide, setNextSlide] = useState(null);
   const [progress, setProgress] = useState(0);
   const [direction, setDirection] = useState(1);
   const [transitioning, setTransitioning] = useState(false);
-  const [hoverSide, setHoverSide] = useState(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth <= 640 : false
   );
@@ -56,6 +64,41 @@ export default function VillaSlider() {
   const containerRef = useRef(null);
   const driftRafRef = useRef(null);
   const driftStartRef = useRef(null);
+
+  // Load rooms from backend and map into slider slides
+  useEffect(() => {
+    const loadRooms = async () => {
+      try {
+        const data = await apiFetch("/rooms");
+        if (data?.success && Array.isArray(data.rooms) && data.rooms.length > 0) {
+          const mapped = data.rooms
+            .map((room, index) => {
+              const images = Array.isArray(room.image) ? room.image : [];
+              const firstImage = images[0];
+              if (!firstImage) return null;
+              return {
+                id: index,
+                url: firstImage,
+                label: room.name,
+                roomTitle: room.name,
+                roomSlug: room.slug,
+              };
+            })
+            .filter(Boolean);
+
+          if (mapped.length > 0) {
+            setSlides(mapped);
+            setCurrent(0);
+          }
+        }
+      } catch (error) {
+        // Fail silently, fall back to static SLIDES
+        console.error("Failed to load rooms for VillaSlider:", error);
+      }
+    };
+
+    loadRooms();
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -105,12 +148,14 @@ export default function VillaSlider() {
   }, [transitioning, stopDrift]);
 
   const goNext = useCallback(() => {
-    startTransition((current + 1) % SLIDES.length, 1);
-  }, [current, startTransition]);
+    if (!slides.length) return;
+    startTransition((current + 1) % slides.length, 1);
+  }, [current, slides.length, startTransition]);
 
   const goPrev = useCallback(() => {
-    startTransition((current - 1 + SLIDES.length) % SLIDES.length, -1);
-  }, [current, startTransition]);
+    if (!slides.length) return;
+    startTransition((current - 1 + slides.length) % slides.length, -1);
+  }, [current, slides.length, startTransition]);
 
   useEffect(() => {
     if (!transitioning) return;
@@ -141,9 +186,9 @@ export default function VillaSlider() {
     };
   }, [transitioning, current, goNext, startDrift]);
 
-  const activeDot = transitioning ? nextSlide : current;
-  const prevIdx = (current - 1 + SLIDES.length) % SLIDES.length;
-  const nextIdx = (current + 1) % SLIDES.length;
+  const activeDot = transitioning && nextSlide !== null ? nextSlide : current;
+  const prevIdx = slides.length ? (current - 1 + slides.length) % slides.length : 0;
+  const nextIdx = slides.length ? (current + 1) % slides.length : 0;
   const driftOffset = -driftProgress * DRIFT_PX;
   const driftScale = 1.03;
 
@@ -163,6 +208,23 @@ export default function VillaSlider() {
 
   // Fixed wave clip — computed once per direction+size, not per frame
   const waveClip = buildWaveClip(direction, size.w, size.h);
+
+  const activeSlide =
+    slides.length > 0
+      ? slides[transitioning && nextSlide !== null ? nextSlide : current]
+      : SLIDES[0];
+
+  const handleRoomClick = (slide) => {
+    if (!slide?.roomTitle) return;
+    const canonical = sanitizeRoomName(slide.roomTitle);
+    const roomSlug = slide.roomSlug || slugifyRoomName(canonical);
+    navigate("/rooms", {
+      state: {
+        selectedRoomName: canonical,
+        selectedRoomSlug: roomSlug,
+      },
+    });
+  };
 
   return (
     <>
@@ -276,46 +338,31 @@ export default function VillaSlider() {
       `}</style>
 
       <div className="v-root">
-        <h2 className="text-3xl font-normal text-[#1a1a1a] leading-tight">Accommodations</h2>
+        <h2 className="text-2xl sm:text-3xl font-normal text-[#1a1a1a] leading-tight">Accommodations</h2>
         <div className="v-ornament">{[0,1,2,3].map(i=><span key={i}/>)}</div>
 
         <div className="v-wrap">
           <div className="v-peek v-peek-left">
-            <img src={SLIDES[prevIdx].url} alt="" draggable={false} />
+            {slides[prevIdx] && (
+              <img src={slides[prevIdx].url} alt="" draggable={false} />
+            )}
           </div>
           <div className="v-peek v-peek-right">
-            <img src={SLIDES[nextIdx].url} alt="" draggable={false} />
+            {slides[nextIdx] && (
+              <img src={slides[nextIdx].url} alt="" draggable={false} />
+            )}
           </div>
 
           <div
-            className="v-stage"
+            className="v-stage cursor-pointer"
             ref={containerRef}
-            onMouseMove={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              if (isMobile) {
-                setHoverSide(e.clientY - r.top < r.height / 2 ? "left" : "right");
-              } else {
-                setHoverSide(e.clientX - r.left < r.width / 2 ? "left" : "right");
-              }
-            }}
-            onMouseLeave={() => setHoverSide(null)}
-            style={{
-              cursor: hoverSide === "left"
-                ? isMobile
-                  ? "n-resize"
-                  : "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M22 8L12 18L22 28' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") 18 18, w-resize"
-                : hoverSide === "right"
-                ? isMobile
-                  ? "s-resize"
-                  : "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M14 8L24 18L14 28' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") 18 18, e-resize"
-                : "default"
-            }}
+            onClick={() => handleRoomClick(activeSlide)}
           >
             {/* Incoming slide — flat beneath, fully revealed as outgoing slides away */}
             {transitioning && nextSlide !== null && (
               <img
                 className="v-img"
-                src={SLIDES[nextSlide].url}
+                src={slides[nextSlide]?.url || SLIDES[nextSlide].url}
                 alt=""
                 draggable={false}
                 style={{ zIndex: 1 }}
@@ -328,7 +375,7 @@ export default function VillaSlider() {
                              then the shaped image translates off screen */}
             <img
               className="v-img"
-              src={SLIDES[current].url}
+              src={slides[current]?.url || SLIDES[current].url}
               alt=""
               draggable={false}
               style={{
@@ -353,15 +400,31 @@ export default function VillaSlider() {
               }}
             />
 
-            <div className="v-zone v-zone-l" onClick={goPrev}>
-              <button className="v-arrowbtn" tabIndex={-1} aria-label="Previous">
+            <div className="v-zone v-zone-l">
+              <button
+                className="v-arrowbtn"
+                tabIndex={-1}
+                aria-label="Previous"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goPrev();
+                }}
+              >
                 <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                   <path d="M9.5 2.5L4.5 7.5L9.5 12.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
             </div>
-            <div className="v-zone v-zone-r" onClick={goNext}>
-              <button className="v-arrowbtn" tabIndex={-1} aria-label="Next">
+            <div className="v-zone v-zone-r">
+              <button
+                className="v-arrowbtn"
+                tabIndex={-1}
+                aria-label="Next"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goNext();
+                }}
+              >
                 <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                   <path d="M5.5 2.5L10.5 7.5L5.5 12.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -369,7 +432,7 @@ export default function VillaSlider() {
             </div>
 
             <div className="v-dots">
-              {SLIDES.map((_, i) => (
+              {slides.map((_, i) => (
                 <button
                   key={i}
                   className={`v-dot${i === activeDot ? " on" : ""}`}
@@ -385,10 +448,15 @@ export default function VillaSlider() {
           </div>
         </div>
 
-        <p className="v-room-name">The Forest Private Pool</p>
-        <p className="v-caption">
-          {SLIDES[transitioning && nextSlide !== null ? nextSlide : current].label}
+        <p
+          className="v-room-name cursor-pointer"
+          onClick={() => handleRoomClick(activeSlide)}
+        >
+          {activeSlide?.roomTitle || "The Forest Private Pool"}
         </p>
+        {/* <p className="v-caption">
+          {activeSlide?.label}
+        </p> */}
       </div>
     </>
   );

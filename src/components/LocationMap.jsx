@@ -24,7 +24,7 @@ const LocationMap = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8 md:mb-12">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal text-[#1a1a1a] mb-3 sm:mb-4 px-4">
+          <h2 className="text-2xl sm:text-3xl font-normal text-[#1a1a1a] mb-3 sm:mb-4 px-4">
             {locationDetails.title}
           </h2>
           <p className="text-sm md:text-base text-[#6B6B6B] font-normal tracking-wide px-4">

@@ -367,6 +367,7 @@ const Navbar = () => {
                   {[
                     { to: "/",        label: "Home" },
                     { to: "/rooms",   label: "Our Rooms", hasDropdown: true },
+                    { to: "/activities", label: "Activities" },
                     { to: "/gallery", label: "Gallery" },
                     { to: "/blog",    label: "Our Blogs" },
                     { to: "/about",   label: "About Us" },

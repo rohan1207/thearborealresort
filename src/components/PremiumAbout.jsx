@@ -80,7 +80,7 @@ const PremiumAbout = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="text-xs sm:text-sm tracking-[0.3em] uppercase text-gray-600 font-normal"
+              className="text-xs sm:text-sm tracking-[0.3em] uppercase text-[#6B6B6B] font-normal"
             >
               Accommodations
             </motion.p>
@@ -90,7 +90,7 @@ const PremiumAbout = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="text-3xl sm:text-4xl lg:text-5xl text-gray-900 leading-tight font-normal"
+              className="text-2xl sm:text-3xl text-[#1a1a1a] leading-tight font-normal"
               style={{ letterSpacing: "0.02em" }}
             >
               Find yourself here
@@ -101,7 +101,7 @@ const PremiumAbout = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="text-gray-700 text-sm sm:text-base leading-relaxed mb-4 sm:mb-6 lg:mb-8 max-w-xl font-normal"
+              className="text-[#6B6B6B] text-sm sm:text-base leading-relaxed mb-4 sm:mb-6 lg:mb-8 max-w-xl font-normal"
             >
               Our elevated structures bring you to the treetops of the valley, offering an unparalleled experience akin to the best tree house in Lonavala. With the lush green rainforest as your backdrop, the view is truly mesmerizing and calming.
             </motion.p>

@@ -198,43 +198,58 @@ const BlogPage = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
+                className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 lg:gap-8"
               >
                 {visibleBlogs.map((blog, index) => (
                   <motion.div
                     key={blog._id || blog.slug || index}
                     variants={itemVariants}
-                    className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-100"
+                    className="group flex flex-col bg-white overflow-hidden border border-black/10 transition-all duration-500 hover:shadow-xl"
                   >
                     {/* Image */}
-                    <Link to={`/blog/${blog.slug}`} className="block overflow-hidden aspect-[16/10]">
-                      <img
-                        src={blog.coverImage || '/placeholder.webp'}
-                        alt={blog.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                        loading="lazy"
-                      />
+                    <Link to={`/blog/${blog.slug}`} className="block relative overflow-hidden">
+                      <div className="aspect-[4/3] overflow-hidden">
+                        <img
+                          src={blog.coverImage || '/placeholder.webp'}
+                          alt={blog.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
                     </Link>
 
                     {/* Content */}
-                    <div className="flex flex-col flex-1 p-3 sm:p-6">
-                      <p className="text-[10px] sm:text-xs text-gray-400 font-light mb-2 sm:mb-3 uppercase tracking-wider">
+                    <div className="flex flex-col flex-1 p-4 sm:p-5 md:p-6">
+                      <p className="text-[10px] sm:text-xs text-[#6B6B6B] font-normal mb-2 sm:mb-3 uppercase tracking-[0.2em]">
                         {formatDate(blog.createdAt)} &bull; {blog.readingTime || '~5'} min read
                       </p>
                       <Link to={`/blog/${blog.slug}`}>
-                        <h2 className="text-sm sm:text-lg font-medium text-gray-900 mb-2 sm:mb-3 leading-snug group-hover:text-green-800 transition-colors duration-300 line-clamp-2">
+                        <h2 className="text-base sm:text-lg md:text-xl text-[#1a1a1a] font-normal mb-2 sm:mb-3 leading-snug group-hover:text-[#2a2a2a] transition-colors duration-300 line-clamp-2">
                           {blog.title}
                         </h2>
                       </Link>
-                      <p className="text-xs sm:text-sm text-gray-500 font-light leading-relaxed line-clamp-3 flex-1">
+                      <p className="text-xs sm:text-sm text-[#6B6B6B] font-normal leading-relaxed line-clamp-3 flex-1">
                         {blog.excerpt || stripHtml(blog.metaDescription || blog.content || '').substring(0, 150) + '...'}
                       </p>
                       <Link
                         to={`/blog/${blog.slug}`}
-                        className="mt-3 sm:mt-4 inline-flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs uppercase tracking-widest text-green-800 hover:text-green-600 font-medium transition-colors duration-300"
+                        className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 sm:px-5 py-2 text-[10px] sm:text-xs tracking-[0.16em] text-white font-medium uppercase hover:bg-[#000000] transition-all duration-300"
                       >
-                        Discover more
-                        <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
+                        <span>Read More</span>
+                        <svg
+                          className="w-3 h-3 sm:w-4 sm:h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
                       </Link>
                     </div>
                   </motion.div>
@@ -246,9 +261,11 @@ const BlogPage = () => {
                 <div className="flex justify-center mt-10 sm:mt-12">
                   <button
                     onClick={() => setShowAll(true)}
-                    className="px-8 sm:px-10 md:px-12 py-3 sm:py-3.5 md:py-4 bg-gray-900 text-white hover:bg-gray-800 rounded-full transition-all duration-300 font-light text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transform"
+                    className="group relative px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-[#1a1a1a] transition-all duration-300 hover:bg-[#000000]"
                   >
-                    View More Blogs
+                    <span className="relative z-10 text-xs sm:text-sm tracking-[0.18em] text-white font-medium uppercase transition-colors duration-300">
+                      View More Blogs
+                    </span>
                   </button>
                 </div>
               )}

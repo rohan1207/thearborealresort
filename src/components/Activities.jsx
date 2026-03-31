@@ -1,49 +1,15 @@
 import React, { useEffect, useState } from "react";
-
-const collections = [
-  {
-    id: 1,
-    title: "Golden Hour Lake Sojourn",
-    sub: "",
-    image: "/activity1.webp",
-    span: "col-span-2 row-span-2",
-    size: "large",
-    tag: "01",
-  },
-  {
-    id: 2,
-    title: "Private Candlelight Decor",
-    sub: "",
-    image: "/activity4.webp",
-    span: "col-span-1 row-span-1",
-    size: "small",
-    tag: "02",
-  },
-  {
-    id: 3,
-    title: "Guided Nature Trail",
-    sub: "",
-    image: "/activity3.jpg",
-    span: "col-span-1 row-span-1",
-    size: "small",
-    tag: "03",
-  },
-  {
-    id: 4,
-    title: "Stargazing Experience",
-    sub: "",
-    image: "/activity2.jpg",
-    span: "col-span-2 row-span-1",
-    size: "wide",
-    tag: "04",
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../utils/api";
 
 export default function Activities() {
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 640 : false
   );
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -56,6 +22,47 @@ export default function Activities() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        setLoading(true);
+        const data = await apiFetch("/activities");
+        if (data.success && Array.isArray(data.activities)) {
+          setActivities(data.activities);
+        } else {
+          setActivities([]);
+        }
+      } catch (err) {
+        console.error("Failed to load activities for homepage:", err);
+        setActivities([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, []);
+
+  const mappedActivities = activities.slice(0, 4).map((activity, index) => {
+    const images = activity.images || [];
+    const image = images[0] || "/activity-placeholder.webp";
+
+    const size =
+      index === 0 ? "large" : index === 3 ? "wide" : "small";
+
+    return {
+      id: activity._id,
+      title: activity.name,
+      image,
+      size,
+      tag: String(index + 1).padStart(2, "0"),
+    };
+  });
+
+  if (!loading && mappedActivities.length === 0) {
+    return null;
+  }
 
   return (
     <section
@@ -89,7 +96,7 @@ export default function Activities() {
               textTransform: "uppercase",
               color: "#6B6B6B",
               fontFamily: "system-ui, sans-serif",
-              fontWeight: 500,
+              fontWeight: 400,
               marginBottom: 10,
             }}
           >
@@ -97,7 +104,7 @@ export default function Activities() {
           </p>
           <h2
             style={{
-              fontSize: "clamp(26px, 3vw, 44px)",
+              fontSize: "clamp(22px, 2.4vw, 32px)",
               fontWeight: 400,
               color: "#1a1a1a",
               letterSpacing: "-0.01em",
@@ -122,65 +129,55 @@ export default function Activities() {
           minHeight: 0,
         }}
       >
-        {/* Card 1 — large, 2×2 */}
-        <BentoCard
-          item={collections[0]}
-          hovered={hovered}
-          setHovered={setHovered}
-          style={{
-            gridColumn: isMobile ? "span 2" : "span 2",
-            gridRow: isMobile ? "span 1" : "span 2",
-            minHeight: isMobile ? 300 : undefined,
-          }}
-        />
-
-        {/* Card 2 — small, 1×1 */}
-        <BentoCard
-          item={collections[1]}
-          hovered={hovered}
-          setHovered={setHovered}
-          style={{
-            gridColumn: "span 1",
-            gridRow: "span 1",
-            minHeight: isMobile ? 190 : undefined,
-          }}
-        />
-
-        {/* Card 3 — small, 1×1 */}
-        <BentoCard
-          item={collections[2]}
-          hovered={hovered}
-          setHovered={setHovered}
-          style={{
-            gridColumn: "span 1",
-            gridRow: "span 1",
-            minHeight: isMobile ? 190 : undefined,
-          }}
-        />
-
-        {/* Card 4 — wide, 2×1 */}
-        <BentoCard
-          item={collections[3]}
-          hovered={hovered}
-          setHovered={setHovered}
-          style={{
-            gridColumn: "span 2",
-            gridRow: "span 1",
-            minHeight: isMobile ? 220 : undefined,
-          }}
-        />
+        {mappedActivities.map((item, idx) => (
+          <BentoCard
+            key={item.id}
+            item={item}
+            hovered={hovered}
+            setHovered={setHovered}
+            onClick={() =>
+              navigate(`/activities/${item.id}`, { state: { activityId: item.id } })
+            }
+            style={{
+              gridColumn:
+                item.size === "large"
+                  ? "span 2"
+                  : item.size === "wide"
+                  ? "span 2"
+                  : "span 1",
+              gridRow:
+                item.size === "large"
+                  ? isMobile
+                    ? "span 1"
+                    : "span 2"
+                  : "span 1",
+              minHeight:
+                item.size === "large"
+                  ? isMobile
+                    ? 300
+                    : undefined
+                  : item.size === "wide"
+                  ? isMobile
+                    ? 220
+                    : undefined
+                  : isMobile
+                  ? 190
+                  : undefined,
+            }}
+          />
+        ))}
       </div>
     </section>
   );
 }
 
-function BentoCard({ item, hovered, setHovered, style }) {
+function BentoCard({ item, hovered, setHovered, style, onClick }) {
   const isHovered = hovered === item.id;
   const isDimmed  = hovered !== null && !isHovered;
 
   return (
     <div
-      onClick={() => (window.location.href = "#")}
+      onClick={onClick}
       onMouseEnter={() => setHovered(item.id)}
       onMouseLeave={() => setHovered(null)}
       style={{

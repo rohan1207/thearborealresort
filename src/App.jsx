@@ -23,12 +23,14 @@ import SmoothScroll from "./components/SmoothScroll";
 import WhatsAppFloat from "./components/WhatsAppFloat";
 import UnifiedBooking from "./pages/UnifiedBooking";
 import LandingPage from "./pages/LandingPage";
+import ActivityTemplate from "./pages/ActivityTemplate";
 
 // New Booking Flow Pages
 import BookingCalendar from "./pages/NewBooking/BookingCalendar";
 import BookingPersonalInfo from "./pages/NewBooking/BookingPersonalInfo";
 import BookingExtras from "./pages/NewBooking/BookingExtras";
 import BookingPayment from "./pages/NewBooking/BookingPayment";
+import UpdatedRooms from "./pages/UpdatedRooms";
 
 const AppLayout = () => {
   const location = useLocation();
@@ -48,7 +50,7 @@ const AppLayout = () => {
             <Route path="/" element={<LandingPage />} />
             <Route path="/home" element={<Home />} />
             <Route path="/about" element={<AboutUs />} />
-            <Route path="/rooms" element={<Rooms />} />
+            <Route path="/rooms" element={<UpdatedRooms />} />
             <Route path="/reservation" element={<div>Reservation</div>} />
             <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/contact" element={<ContactUs />} />
@@ -81,6 +83,8 @@ const AppLayout = () => {
 
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:slug" element={<BlogDetail />} />
+            <Route path="/activities" element={<Home />} />
+            <Route path="/activities/:activityId" element={<ActivityTemplate />} />
           </Routes>
         </ErrorBoundary>
         {!isLandingPage && <Footer />}
