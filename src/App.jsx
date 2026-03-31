@@ -83,7 +83,7 @@ const AppLayout = () => {
 
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:slug" element={<BlogDetail />} />
-            <Route path="/activities" element={<Home />} />
+            <Route path="/activities" element={<ActivityTemplate />} />
             <Route path="/activities/:activityId" element={<ActivityTemplate />} />
           </Routes>
         </ErrorBoundary>
