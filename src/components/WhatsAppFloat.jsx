@@ -7,7 +7,7 @@ const WHATSAPP_NUMBER = "917775023535";
 
 // Short, structured prefilled message to reduce back-and-forth
 const WHATSAPP_PREFILL = encodeURIComponent(
-  "Hi! I'd like to enquire about a stay at Arboreal Resort."
+  "Hey! 👋 Just checked out your website, wanted to know more about availability and packages!"
 );
 
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PREFILL}`;
