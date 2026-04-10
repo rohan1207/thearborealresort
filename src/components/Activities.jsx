@@ -44,9 +44,24 @@ export default function Activities() {
     fetchActivities();
   }, []);
 
-  const mappedActivities = activities.slice(0, 4).map((activity, index) => {
+  const enabledActivities = activities.filter((activity) => {
+    if (activity?.enabled === false) return false;
+    if (activity?.isEnabled === false) return false;
+    if (activity?.isActive === false) return false;
+    if (activity?.status === "disabled" || activity?.status === "inactive") return false;
+    return true;
+  });
+
+  // Always fill all 4 layout slots. If backend returns fewer active activities,
+  // repeat available ones so the bento grid never leaves blank spaces.
+  const slotActivities = Array.from({ length: 4 }, (_, index) => {
+    if (enabledActivities.length === 0) return null;
+    return enabledActivities[index % enabledActivities.length];
+  }).filter(Boolean);
+
+  const mappedActivities = slotActivities.map((activity, index) => {
     const images = activity.images || [];
-    const image = images[0] || "/activity-placeholder.webp";
+    const image = images[1] || "/activity-placeholder.webp";
 
     const size =
       index === 0 ? "large" : index === 3 ? "wide" : "small";
@@ -131,7 +146,7 @@ export default function Activities() {
       >
         {mappedActivities.map((item, idx) => (
           <BentoCard
-            key={item.id}
+            key={`${item.id}-${idx}`}
             item={item}
             hovered={hovered}
             setHovered={setHovered}

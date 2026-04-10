@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { apiFetch } from "../utils/api";
+import Lightbox from "../components/Lightbox";
 
 const ActivityTemplate = () => {
   const { activityId } = useParams();
@@ -13,6 +14,7 @@ const ActivityTemplate = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -48,9 +50,10 @@ const ActivityTemplate = () => {
     () => (currentActivity?.images && currentActivity.images.length > 0 ? currentActivity.images : []),
     [currentActivity]
   );
+  const primaryDisplayImage = images[1] || images[0] || "";
 
   const otherActivities = useMemo(
-    () => activities.filter((a) => currentActivity && a._id !== currentActivity._id).slice(0, 4),
+    () => activities.filter((a) => currentActivity && a._id !== currentActivity._id).slice(0, 6),
     [activities, currentActivity]
   );
 
@@ -72,6 +75,15 @@ const ActivityTemplate = () => {
   const handleNextImage = () => {
     if (!images.length) return;
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const openLightbox = (index = 0) => {
+    setCurrentImageIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
   };
 
   if (loading) {
@@ -114,7 +126,7 @@ const ActivityTemplate = () => {
       </Helmet>
 
       <div className="min-h-screen bg-[#f5f3ed] pt-24 sm:pt-[150px] pb-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-8 sm:mb-10">
             <p className="text-xs sm:text-sm tracking-[0.3em] uppercase text-[#6B6B6B] font-normal mb-2 sm:mb-3">
               Curated Experiences
@@ -125,13 +137,14 @@ const ActivityTemplate = () => {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-start mb-12">
-            <div className="relative w-full h-[260px] sm:h-[320px] md:h-[380px] lg:h-[420px] bg-[#e5e1d8] overflow-hidden">
+            <div className="relative w-full h-[300px] sm:h-[380px] md:h-[460px] lg:h-[520px] bg-[#e5e1d8] overflow-hidden">
               {images.length > 0 && (
                 <>
                   <img
-                    src={images[currentImageIndex]}
+                    src={currentImageIndex === 0 ? primaryDisplayImage : images[currentImageIndex]}
                     alt={currentActivity.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-zoom-in"
+                    onClick={() => openLightbox(currentImageIndex)}
                   />
                   {images.length > 1 && (
                     <>
@@ -220,16 +233,13 @@ const ActivityTemplate = () => {
               <h3 className="text-xs sm:text-sm tracking-[0.25em] uppercase text-[#6B6B6B] font-normal mb-3">
                 Gallery
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {images.map((src, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => {
-                      setCurrentImageIndex(idx);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    className={`w-full h-32 sm:h-36 md:h-40 bg-[#e5e1d8] overflow-hidden ${
+                    onClick={() => openLightbox(idx)}
+                    className={`w-full h-40 sm:h-48 md:h-56 lg:h-64 bg-[#e5e1d8] overflow-hidden cursor-zoom-in ${
                       currentImageIndex === idx ? "ring-2 ring-[#1a1a1a]" : ""
                     }`}
                   >
@@ -249,11 +259,11 @@ const ActivityTemplate = () => {
               <h3 className="text-xs sm:text-sm tracking-[0.3em] uppercase text-[#6B6B6B] font-normal mb-4">
                 Other Activities You May Explore
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {otherActivities.map((activity) => {
                   const thumb =
                     activity.images && activity.images.length > 0
-                      ? activity.images[0]
+                      ? activity.images[1] || activity.images[0]
                       : "/activity-placeholder.webp";
                   return (
                     <button
@@ -262,7 +272,7 @@ const ActivityTemplate = () => {
                       onClick={() => handleSelectActivity(activity._id)}
                       className="text-left bg-[#f5f3ed] hover:bg-[#efe9dd] transition-colors duration-300"
                     >
-                      <div className="w-full h-32 sm:h-40 bg-[#e5e1d8] overflow-hidden">
+                      <div className="w-full h-40 sm:h-48 md:h-52 lg:h-56 bg-[#e5e1d8] overflow-hidden">
                         <img
                           src={thumb}
                           alt={activity.name}
@@ -282,6 +292,15 @@ const ActivityTemplate = () => {
           )}
         </div>
       </div>
+      {lightboxOpen && images.length > 0 && (
+        <Lightbox
+          images={images}
+          currentIndex={currentImageIndex}
+          onClose={closeLightbox}
+          onNext={handleNextImage}
+          onPrev={handlePrevImage}
+        />
+      )}
     </>
   );
 };

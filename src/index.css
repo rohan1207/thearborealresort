@@ -41,6 +41,22 @@ body {
   overscroll-behavior-x: none;
 }
 
+/* Global typography consistency (homepage-style baseline) */
+#root,
+#root * {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+
+#root h1,
+#root h2,
+#root h3,
+#root h4,
+#root h5,
+#root h6 {
+  font-weight: 400 !important;
+  letter-spacing: normal;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto !important;

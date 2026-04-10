@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { apiFetch } from "../utils/api";
 import { useGlobalSEO } from "../hooks/useGlobalSEO";
+import Lightbox from "../components/Lightbox";
 import {
   FiSun,
   FiWind,
@@ -131,6 +132,8 @@ const UpdatedRooms = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   // Fetch rooms once
   useEffect(() => {
@@ -277,6 +280,26 @@ const UpdatedRooms = () => {
     }
   };
 
+  const openLightbox = (index) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxIndex(null);
+  };
+
+  const handleLightboxNext = () => {
+    if (!images.length) return;
+    setLightboxIndex((prev) => ((prev ?? 0) + 1) % images.length);
+  };
+
+  const handleLightboxPrev = () => {
+    if (!images.length) return;
+    setLightboxIndex((prev) => ((prev ?? 0) - 1 + images.length) % images.length);
+  };
+
   return (
     <>
       <Helmet>
@@ -298,7 +321,7 @@ const UpdatedRooms = () => {
       </Helmet>
 
       <div className="min-h-screen bg-[#f8f6f0] pt-24 sm:pt-[165px] pb-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* Page heading */}
           <div className="text-center mb-8 sm:mb-10">
             <p className="text-xs sm:text-sm tracking-[0.3em] uppercase text-[#6B6B6B] font-normal mb-2 sm:mb-3">
@@ -328,12 +351,14 @@ const UpdatedRooms = () => {
 
           {/* Hero image – slightly larger */}
           {heroImage && (
-            <div className="w-full h-[320px] sm:h-[420px] md:h-[480px] lg:h-[520px] bg-[#e5e1d8] overflow-hidden mb-10">
-              <img
-                src={heroImage}
-                alt={currentRoom.name}
-                className="w-full h-full object-cover"
-              />
+            <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 mb-12 px-2 sm:px-3 lg:px-4">
+              <div className="w-full h-[340px] sm:h-[450px] md:h-[540px] lg:h-[600px] bg-[#e5e1d8] overflow-hidden">
+                <img
+                  src={heroImage}
+                  alt={currentRoom.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
           )}
 
@@ -347,7 +372,7 @@ const UpdatedRooms = () => {
                 {currentRoom.description}
               </p>
             </div>
-            <div className="w-full h-[220px] sm:h-[260px] md:h-[300px] bg-[#e5e1d8] overflow-hidden">
+            <div className="w-full h-[250px] sm:h-[300px] md:h-[340px] lg:h-[380px] bg-[#e5e1d8] overflow-hidden">
               <img
                 src={images[1] || heroImage}
                 alt={currentRoom.name}
@@ -359,7 +384,7 @@ const UpdatedRooms = () => {
           {/* Section 2 – YOUR STAY INCLUDES (right text, left image) */}
           {stayIncludes.length > 0 && (
             <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-start mb-12">
-              <div className="order-2 md:order-1 w-full h-[220px] sm:h-[260px] md:h-[300px] bg-[#e5e1d8] overflow-hidden">
+              <div className="order-2 md:order-1 w-full h-[250px] sm:h-[300px] md:h-[340px] lg:h-[380px] bg-[#e5e1d8] overflow-hidden">
                 <img
                   src={images[2] || images[1] || heroImage}
                   alt={currentRoom.name}
@@ -406,7 +431,7 @@ const UpdatedRooms = () => {
                   ))}
                 </div>
               </div>
-              <div className="w-full h-[220px] sm:h-[260px] md:h-[300px] bg-[#e5e1d8] overflow-hidden">
+              <div className="w-full h-[250px] sm:h-[300px] md:h-[340px] lg:h-[380px] bg-[#e5e1d8] overflow-hidden">
                 <img
                   src={images[3] || images[2] || heroImage}
                   alt={currentRoom.name}
@@ -419,7 +444,7 @@ const UpdatedRooms = () => {
           {/* Section 4 – BATH & WELLNESS (left image, right text for zigzag) */}
           {bathWellness.length > 0 && (
             <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-start mb-12">
-              <div className="w-full h-[220px] sm:h-[260px] md:h-[300px] bg-[#e5e1d8] overflow-hidden">
+              <div className="w-full h-[250px] sm:h-[300px] md:h-[340px] lg:h-[380px] bg-[#e5e1d8] overflow-hidden">
                 <img
                   src={images[4] || images[3] || heroImage}
                   alt={currentRoom.name}
@@ -454,16 +479,18 @@ const UpdatedRooms = () => {
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {images.map((src, i) => (
-                  <div
+                  <button
                     key={i}
-                    className="w-full h-48 sm:h-52 md:h-56 bg-[#e5e1d8] overflow-hidden"
+                    type="button"
+                    onClick={() => openLightbox(i)}
+                    className="w-full h-56 sm:h-64 md:h-72 lg:h-80 bg-[#e5e1d8] overflow-hidden cursor-zoom-in"
                   >
                     <img
                       src={src}
                       alt={`${currentRoom.name} ${i + 1}`}
                       className="w-full h-full object-cover"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -496,7 +523,7 @@ const UpdatedRooms = () => {
                       className="text-left bg-[#f5f3ed] hover:bg-[#efe9dd] transition-colors duration-300"
                     >
                       {thumb && (
-                        <div className="w-full h-56 bg-[#e5e1d8] overflow-hidden">
+                        <div className="w-full h-64 sm:h-72 md:h-80 bg-[#e5e1d8] overflow-hidden">
                           <img
                             src={thumb}
                             alt={room.name}
@@ -517,6 +544,15 @@ const UpdatedRooms = () => {
           )}
         </div>
       </div>
+      {lightboxOpen && lightboxIndex !== null && (
+        <Lightbox
+          images={images}
+          currentIndex={lightboxIndex}
+          onClose={closeLightbox}
+          onNext={handleLightboxNext}
+          onPrev={handleLightboxPrev}
+        />
+      )}
     </>
   );
 };

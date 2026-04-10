@@ -41,8 +41,8 @@ const AboutUs = () => {
       <div className="overflow-x-hidden">
         <Hero />
         <About />
-        {/* <RoomShowcase /> */}
-        <Villaslider />
+        <RoomShowcase />
+        {/* <Villaslider /> */}
         <Testimonials />
         <LocationMap />
       </div>
