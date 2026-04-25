@@ -104,7 +104,7 @@ const Hero = () => {
 
   return (
     <section className="w-full bg-[#f5f3ed] pt-24 sm:pt-[150px] lg:pt-[140px] pb-8 sm:pb-10">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-0">
         <div
           ref={frameRef}
           className="relative w-full h-[72vh] sm:h-[72vh] lg:h-[82vh] overflow-hidden border border-black/10 bg-black/10"
